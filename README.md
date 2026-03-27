@@ -41,6 +41,7 @@ Run the main class located at src/main/java/com/musicapp/KangmusicApplication.ja
 The application will start on port 8080.
 
 4. Accessing the Application
+
 Open your web browser and go to: http://localhost:8080
 
 H2 Database Console: http://localhost:8080/h2-console   
