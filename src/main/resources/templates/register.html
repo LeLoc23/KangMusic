@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng Ký Tài Khoản</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+    <div class="auth-container">
+        <h2>📝 Tạo Tài Khoản</h2>
+        
+        <div th:if="${error}" style="background-color: #ff4d4d; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            <span th:text="${error}"></span>
+        </div>
+
+        <form th:action="@{/register}" method="post">
+            <label>Họ và Tên :</label>
+            <input type="text" name="fullName" placeholder="Nhập họ tên...">
+
+            <label>Địa chỉ Email (*):</label>
+            <input type="email" name="email" required placeholder="Ví dụ: nguyenvan@gmail.com...">
+
+            <label>Tên đăng nhập (*):</label>
+            <input type="text" name="username" required placeholder="Tên dùng để đăng nhập...">
+
+            <label>Mật khẩu (*):</label>
+            <input type="password" name="password" required 
+                   pattern="^(?=.*[A-Z]).{6,}$" 
+                   title="Mật khẩu phải có ít nhất 6 ký tự và 1 chữ viết hoa"
+                   placeholder="Nhập mật khẩu...">
+
+            <label>Nhập lại mật khẩu (*):</label>
+            <input type="password" name="confirmPassword" required placeholder="Xác nhận lại mật khẩu...">
+
+            <button type="submit">ĐĂNG KÝ</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>Đã có tài khoản? <a th:href="@{/login}">Đăng nhập</a></p>
+            <p><a th:href="@{/}">⬅ Trở về Trang chủ</a></p>
+        </div>
+    </div>
+</body>
+</html>

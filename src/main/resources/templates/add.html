@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Thêm Nhạc Mới</title>
+    
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/add.css}">
+</head>
+<body>
+
+    <div class="form-container">
+        <h2 style="text-align: center; color: #1db954;">➕ Thêm Bài Hát / Video</h2>
+        
+        <form th:action="@{/add}" method="post" enctype="multipart/form-data">
+            
+            <label>Tên bài hát/video:</label>
+            <input type="text" name="title" required placeholder="VD: Lạc Trôi">
+
+            <label>Ca sĩ/Nghệ sĩ:</label>
+            <input type="text" name="artist" required placeholder="VD: Sơn Tùng M-TP">
+
+            <label>Chọn File Nhạc / Video từ máy tính:</label>
+            <input type="file" name="mediaFile" accept="audio/*, video/*" required>
+
+            <label>Loại (AUDIO hoặc VIDEO):</label>
+            <select name="type">
+                <option value="AUDIO">Bài hát (Audio)</option>
+                <option value="VIDEO">Video Clip</option>
+            </select>
+
+            <label>Nhãn Cảm Xúc:</label>
+            <input type="text" name="emotionLabel" placeholder="VD: Buồn, Sôi động, Chill...">
+
+            <button type="submit">TẢI LÊN & LƯU</button>
+        </form>
+        
+        <a href="/">⬅ Quay lại trang chủ</a>
+    </div>
+
+</body>
+</html>

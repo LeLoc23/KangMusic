@@ -1,0 +1,9 @@
+.auth-container { max-width: 400px; margin: 50px auto; background-color: #181818; padding: 40px; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.5); }
+.auth-container h2 { text-align: center; color: #1db954; margin-bottom: 30px; }
+.auth-container label { display: block; margin-bottom: 8px; color: #b3b3b3; }
+.auth-container input { width: 100%; padding: 12px; margin-bottom: 20px; border-radius: 5px; border: none; background-color: #282828; color: white; box-sizing: border-box; }
+.auth-container button { width: 100%; padding: 12px; background-color: #1db954; color: black; font-weight: bold; border: none; border-radius: 5px; cursor: pointer; transition: 0.2s; }
+.auth-container button:hover { background-color: #1ed760; }
+.auth-links { text-align: center; margin-top: 20px; font-size: 14px; }
+.auth-links a { color: #1db954; text-decoration: none; }
+.auth-links a:hover { text-decoration: underline; }

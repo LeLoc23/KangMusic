@@ -1,0 +1,55 @@
+/* Lưới danh sách nhạc */
+.media-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 20px;
+    margin-top: 30px;
+}
+
+/* Thẻ bài hát */
+.media-card {
+    background-color: #181818;
+    border-radius: 10px;
+    padding: 20px;
+    box-shadow: 0 4px 10px rgba(0, 0, 0, 0.3);
+    transition: transform 0.2s;
+}
+
+.media-card:hover {
+    background-color: #282828;
+    transform: translateY(-5px);
+}
+
+/* Nhãn cảm xúc */
+.badge {
+    display: inline-block;
+    background-color: #1db954;
+    color: #121212;
+    padding: 3px 8px;
+    border-radius: 12px;
+    font-size: 12px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.media-card h3 { margin: 5px 0 0 0; }
+.media-card p { color: #b3b3b3; font-size: 14px; margin: 5px 0 15px 0; }
+
+audio, video {
+    width: 100%;
+    outline: none;
+    border-radius: 5px;
+}
+
+/* Nút thêm mới ngoài trang chủ */
+.add-btn-container { text-align: right; margin-top: 20px; margin-bottom: 10px; }
+.add-btn {
+    background-color: #1db954;
+    color: black;
+    padding: 10px 15px;
+    text-decoration: none;
+    border-radius: 5px;
+    font-weight: bold;
+    transition: background-color 0.2s;
+}
+.add-btn:hover { background-color: #1ed760; }

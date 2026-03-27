@@ -1,0 +1,166 @@
+/* Thiết lập nền Dark Mode và Font chữ cho toàn website */
+body {
+    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    background-color: #121212;
+    color: #ffffff;
+    margin: 0;
+    padding: 20px;
+}
+
+/* Tiêu đề chính */
+h1 {
+    text-align: center;
+    color: #1db954; 
+    border-bottom: 2px solid #282828;
+    padding-bottom: 15px;
+}
+
+/* Căn giữa nội dung toàn trang */
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* =========================================
+   THANH ĐIỀU HƯỚNG (NAVIGATION BAR)
+   ========================================= */
+.top-nav {
+    display: flex;
+    justify-content: flex-end; /* Đẩy các nút sang góc phải */
+    align-items: center;      /* Căn giữa các phần tử theo chiều dọc */
+    padding: 10px 0;
+    margin-bottom: 20px;
+}
+
+.auth-btn {
+    padding: 8px 20px;
+    margin-left: 15px;
+    border-radius: 20px; /* Bo tròn giống Spotify */
+    text-decoration: none;
+    font-weight: bold;
+    font-size: 14px;
+    transition: all 0.2s;
+    display: inline-block;
+    border: none;
+    cursor: pointer;
+}
+
+/* Nút Đăng nhập: Nền trong suốt, chữ xám */
+.login-btn {
+    background-color: transparent;
+    color: #b3b3b3;
+}
+.login-btn:hover {
+    color: #ffffff;
+    transform: scale(1.05);
+}
+
+/* Nút Đăng ký & Nút Quản trị (Dùng chung style nổi bật) */
+.register-btn, .admin-btn {
+    background-color: #ffffff;
+    color: #000000;
+}
+.register-btn:hover, .admin-btn:hover {
+    transform: scale(1.05);
+    background-color: #f0f0f0;
+}
+
+/* Nút Quản trị màu xanh dương nhẹ để phân biệt */
+.admin-btn {
+    background-color: #3498db;
+    color: #ffffff;
+}
+
+/* Nút Đăng xuất: Màu đỏ nhẹ nhàng */
+.logout-btn {
+    background-color: #e74c3c;
+    color: #ffffff;
+}
+.logout-btn:hover {
+    background-color: #c0392b;
+    transform: scale(1.05);
+}
+
+/* Hiển thị thông tin lời chào người dùng */
+.user-info {
+    font-size: 14px;
+    font-weight: bold;
+    color: #1db954; /* Màu xanh lá đặc trưng */
+    margin-right: 10px;
+}
+
+.user-name {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
+/* Đảm bảo form đăng xuất không làm lệch dòng */
+.logout-form {
+    display: inline;
+    margin: 0;
+    padding: 0;
+}
+
+/* =========================================
+   MENU DROPDOWN (HỒ SƠ CÁ NHÂN) - PHẦN MỚI THÊM
+   ========================================= */
+.user-dropdown {
+    position: relative;
+    display: inline-block;
+}
+
+.dropbtn {
+    background-color: transparent;
+    color: #1db954;
+    font-weight: bold;
+    font-size: 15px;
+    border: none;
+    cursor: pointer;
+    padding: 10px;
+    display: flex;
+    align-items: center;
+}
+
+.dropbtn:hover {
+    color: #1ed760;
+}
+
+.dropdown-content {
+    display: none;
+    position: absolute;
+    right: 0;
+    background-color: #282828;
+    min-width: 170px;
+    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
+    z-index: 1;
+    border-radius: 5px;
+    overflow: hidden;
+}
+
+.dropdown-content a, .dropdown-content button {
+    color: #ffffff;
+    padding: 12px 16px;
+    text-decoration: none;
+    display: block;
+    width: 100%;
+    text-align: left;
+    background: none;
+    border: none;
+    font-size: 14px;
+    cursor: pointer;
+    box-sizing: border-box;
+}
+
+.dropdown-content a:hover, .dropdown-content button:hover {
+    background-color: #3e3e3e;
+}
+
+/* Hiển thị menu khi hover chuột vào khu vực dropdown */
+.user-dropdown:hover .dropdown-content {
+    display: block;
+}
+
+.dropdown-logout {
+    color: #e74c3c !important; /* Đỏ cho nút đăng xuất */
+    font-weight: bold;
+}

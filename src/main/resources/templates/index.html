@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>KangMusic</title>
+    
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
+</head>
+<body>
+
+    <div class="container">
+        
+        <div class="top-nav">
+            
+            <div sec:authorize="isAnonymous()">
+                <a th:href="@{/login}" class="auth-btn login-btn">Đăng nhập</a>
+                <a th:href="@{/register}" class="auth-btn register-btn">Đăng ký</a>
+            </div>
+
+            <div sec:authorize="isAuthenticated()" class="user-dropdown">
+                <button class="dropbtn">
+                    Xin chào, <span sec:authentication="name" style="margin: 0 5px; text-decoration: underline;">User</span> ▼
+                </button>
+                <div class="dropdown-content">
+                    <a th:href="@{/profile}">👤 Hồ sơ cá nhân</a>
+                    
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}">🛠️ Trang Quản Trị</a>
+                    
+                    <form th:action="@{/logout}" method="post" style="margin: 0;">
+                        <button type="submit" class="dropdown-logout">🚪 Đăng xuất</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <h1>🎵 Thư Viện Giải Trí</h1>
+
+        <div class="add-btn-container" sec:authorize="hasAuthority('ROLE_ADMIN')">
+            <a th:href="@{/add}" class="add-btn">➕ Thêm bài hát mới</a>
+        </div>
+
+        <div class="media-grid">
+            <div th:each="item : ${mediaList}" class="media-card">
+                
+                <span class="badge" th:text="${item.emotionLabel}">Vui vẻ</span>
+                
+                <h3 th:text="${item.title}">Tên bài hát</h3>
+                <p th:text="${item.artist}">Ca sĩ</p>
+
+                <div th:if="${item.type == 'AUDIO'}">
+                    <audio controls>
+                        <source th:src="@{'/media/' + ${item.fileName}}" type="audio/mpeg">
+                        Trình duyệt không hỗ trợ thẻ audio.
+                    </audio>
+                </div>
+
+                <div th:if="${item.type == 'VIDEO'}">
+                    <video controls>
+                        <source th:src="@{'/media/' + ${item.fileName}}" type="video/mp4">
+                        Trình duyệt không hỗ trợ thẻ video.
+                    </video>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+</body>
+</html>

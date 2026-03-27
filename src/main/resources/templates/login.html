@@ -1,0 +1,43 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Đăng Nhập</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+    <div class="auth-container">
+        <h2>🎵 Đăng Nhập</h2>
+        
+        <div th:if="${param.error}" style="background-color: #ff4d4d; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            Tên đăng nhập hoặc mật khẩu không chính xác!
+        </div>
+        <div th:if="${param.logout}" style="background-color: #3498db; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            Bạn đã đăng xuất thành công!
+        </div>
+        <div th:if="${param.success}" style="background-color: #1db954; color: black; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            Thao tác thành công! Mời bạn đăng nhập.
+        </div>
+
+        <form th:action="@{/login}" method="post">
+            <label>Tên đăng nhập:</label>
+            <input type="text" name="username" required placeholder="Nhập tên đăng nhập...">
+
+            <label>Mật khẩu:</label>
+            <input type="password" name="password" required placeholder="Nhập mật khẩu...">
+
+            <div style="text-align: right; margin-top: -10px; margin-bottom: 15px;">
+                <a th:href="@{/forgot-password}" style="color: #1db954; font-size: 13px; text-decoration: none; font-weight: bold;">Quên mật khẩu?</a>
+            </div>
+
+            <button type="submit">ĐĂNG NHẬP</button>
+        </form>
+        
+        <div class="auth-links">
+            <p>Chưa có tài khoản? <a th:href="@{/register}">Đăng ký ngay</a></p>
+            <p><a th:href="@{/}">⬅ Trở về Trang chủ</a></p>
+        </div>
+    </div>
+</body>
+</html>

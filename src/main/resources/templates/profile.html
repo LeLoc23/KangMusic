@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <title>Hồ Sơ Cá Nhân - KangMusic</title>
+    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/auth.css}">
+</head>
+<body>
+    <div class="auth-container" style="max-width: 500px;">
+        <h2>👤 Hồ Sơ Của Bạn</h2>
+        
+        <div th:if="${param.success}" style="background-color: #1db954; color: black; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            Đổi mật khẩu thành công!
+        </div>
+        <div th:if="${param.error}" style="background-color: #ff4d4d; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
+            <span th:if="${param.error[0] == 'old_wrong'}">Mật khẩu cũ không chính xác!</span>
+            <span th:if="${param.error[0] == 'weak_pass'}">Mật khẩu mới phải >= 6 ký tự và có chữ hoa!</span>
+            <span th:if="${param.error[0] == 'mismatch'}">Mật khẩu nhập lại không khớp!</span>
+        </div>
+
+        <div style="background-color: #282828; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
+            <p><strong>Tên đăng nhập:</strong> <span th:text="${user.username}"></span></p>
+            <p><strong>Họ và tên:</strong> <span th:text="${user.fullName == '' ? 'Chưa cập nhật' : user.fullName}"></span></p>
+            <p><strong>Vai trò:</strong> <span th:text="${user.role == 'ROLE_ADMIN' ? 'Quản Trị Viên 👑' : 'Người Dùng 🎧'}"></span></p>
+        </div>
+
+        <h3 style="color: #1db954; border-bottom: 1px solid #333; padding-bottom: 10px;">Đổi Mật Khẩu</h3>
+        <form th:action="@{/profile/change-password}" method="post">
+            <label>Mật khẩu hiện tại:</label>
+            <input type="password" name="oldPassword" required placeholder="Nhập mật khẩu đang dùng...">
+
+            <label>Mật khẩu mới:</label>
+            <input type="password" name="newPassword" required pattern="^(?=.*[A-Z]).{6,}$" title="Tối thiểu 6 ký tự, có chữ hoa" placeholder="Nhập mật khẩu mới...">
+
+            <label>Xác nhận mật khẩu mới:</label>
+            <input type="password" name="confirmPassword" required placeholder="Nhập lại mật khẩu mới...">
+
+            <button type="submit">CẬP NHẬT MẬT KHẨU</button>
+        </form>
+
+        <div class="auth-links">
+            <p><a th:href="@{/}">⬅ Trở về Trang chủ</a></p>
+        </div>
+    </div>
+</body>
+</html>
