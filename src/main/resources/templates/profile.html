@@ -1,47 +1,91 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head>
+    <!-- Use fragments head but add auth.css -->
     <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Hồ Sơ Cá Nhân - KangMusic</title>
     <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/index.css}">
     <link rel="stylesheet" th:href="@{/css/auth.css}">
+    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
+    <script defer th:src="@{/js/app.js}"></script>
 </head>
-<body>
-    <div class="auth-container" style="max-width: 500px;">
-        <h2>👤 Hồ Sơ Của Bạn</h2>
+<body hx-boost="true">
+
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+
+        <!-- MAIN CONTENT (HTMX target) -->
+        <main class="content-area" id="main-content">
+            <div style="padding: 40px 24px;">
+                <div class="auth-wrapper" style="max-width:520px; margin: 0 auto;">
+                    <br>
+                    <div class="auth-container">
+                        <h2>👤 Hồ Sơ Của Bạn</h2>
+
+                        <div th:if="${param.success}" class="auth-alert auth-alert-success">
+                            Đổi mật khẩu thành công!
+                        </div>
+                        <div th:if="${param.error}" class="auth-alert auth-alert-error">
+                            <span th:if="${param.error[0] == 'old_wrong'}">Mật khẩu cũ không chính xác!</span>
+                            <span th:if="${param.error[0] == 'weak_pass'}">Mật khẩu mới phải >= 6 ký tự và có chữ hoa!</span>
+                            <span th:if="${param.error[0] == 'mismatch'}">Mật khẩu nhập lại không khớp!</span>
+                        </div>
+
+                        <!-- User info -->
+                        <div class="profile-info-box">
+                            <div class="profile-info-row">
+                                <span class="profile-info-label">Tên đăng nhập</span>
+                                <span class="profile-info-value" th:text="${user.username}">username</span>
+                            </div>
+                            <div class="profile-info-row">
+                                <span class="profile-info-label">Họ và tên</span>
+                                <span class="profile-info-value" th:text="${user.fullName == '' ? 'Chưa cập nhật' : user.fullName}">Họ tên</span>
+                            </div>
+                            <div class="profile-info-row">
+                                <span class="profile-info-label">Vai trò</span>
+                                <span class="profile-info-value" th:text="${user.role == 'ROLE_ADMIN' ? '👑 Quản Trị Viên' : '🎧 Người Dùng'}">Người dùng</span>
+                            </div>
+                        </div>
+
+                        <!-- Change password -->
+                        <div class="section-subtitle">Đổi Mật Khẩu</div>
+
+                        <form th:action="@{/profile/change-password}" method="post">
+                            <div class="form-group">
+                                <label>Mật khẩu hiện tại</label>
+                                <input type="password" name="oldPassword" required placeholder="Nhập mật khẩu đang dùng...">
+                            </div>
+                            <div class="form-group">
+                                <label>Mật khẩu mới</label>
+                                <input type="password" name="newPassword" required
+                                       pattern="^(?=.*[A-Z]).{6,}$"
+                                       title="Tối thiểu 6 ký tự, có chữ hoa"
+                                       placeholder="Tối thiểu 6 ký tự, có 1 chữ hoa...">
+                            </div>
+                            <div class="form-group">
+                                <label>Xác nhận mật khẩu mới</label>
+                                <input type="password" name="confirmPassword" required placeholder="Nhập lại mật khẩu mới...">
+                            </div>
+                            <button type="submit">CẬP NHẬT MẬT KHẨU</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+            <!-- Mobile padding -->
+            <div style="height: 100px;"></div>
+        </main>
         
-        <div th:if="${param.success}" style="background-color: #1db954; color: black; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
-            Đổi mật khẩu thành công!
-        </div>
-        <div th:if="${param.error}" style="background-color: #ff4d4d; color: white; padding: 10px; border-radius: 5px; margin-bottom: 15px; text-align: center; font-weight: bold;">
-            <span th:if="${param.error[0] == 'old_wrong'}">Mật khẩu cũ không chính xác!</span>
-            <span th:if="${param.error[0] == 'weak_pass'}">Mật khẩu mới phải >= 6 ký tự và có chữ hoa!</span>
-            <span th:if="${param.error[0] == 'mismatch'}">Mật khẩu nhập lại không khớp!</span>
-        </div>
-
-        <div style="background-color: #282828; padding: 15px; border-radius: 5px; margin-bottom: 20px;">
-            <p><strong>Tên đăng nhập:</strong> <span th:text="${user.username}"></span></p>
-            <p><strong>Họ và tên:</strong> <span th:text="${user.fullName == '' ? 'Chưa cập nhật' : user.fullName}"></span></p>
-            <p><strong>Vai trò:</strong> <span th:text="${user.role == 'ROLE_ADMIN' ? 'Quản Trị Viên 👑' : 'Người Dùng 🎧'}"></span></p>
-        </div>
-
-        <h3 style="color: #1db954; border-bottom: 1px solid #333; padding-bottom: 10px;">Đổi Mật Khẩu</h3>
-        <form th:action="@{/profile/change-password}" method="post">
-            <label>Mật khẩu hiện tại:</label>
-            <input type="password" name="oldPassword" required placeholder="Nhập mật khẩu đang dùng...">
-
-            <label>Mật khẩu mới:</label>
-            <input type="password" name="newPassword" required pattern="^(?=.*[A-Z]).{6,}$" title="Tối thiểu 6 ký tự, có chữ hoa" placeholder="Nhập mật khẩu mới...">
-
-            <label>Xác nhận mật khẩu mới:</label>
-            <input type="password" name="confirmPassword" required placeholder="Nhập lại mật khẩu mới...">
-
-            <button type="submit">CẬP NHẬT MẬT KHẨU</button>
-        </form>
-
-        <div class="auth-links">
-            <p><a th:href="@{/}">⬅ Trở về Trang chủ</a></p>
-        </div>
+        <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+        <div th:replace="~{fragments :: right-sidebar}"></div>
     </div>
+    
+    <!-- GLOBAL PLAYER persists -->
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
 </body>
 </html>

@@ -1,0 +1,410 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments :: head(${track.title + ' - KangMusic'})}"></head>
+
+<body>
+    <div class="page-wrapper">
+        <div th:replace="~{fragments :: top-bar}"></div>
+        <div class="main-layout">
+            <div th:replace="~{fragments :: library-sidebar}"></div>
+            <main class="content-area" id="main-content" th:fragment="main-content">
+
+                <!-- Back button -->
+                <div class="content-header">
+                    <div class="content-nav-btns">
+                        <button class="content-nav-btn" onclick="history.back()">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
+                                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
+                            </svg>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="content-body">
+                    <!-- ── Hero section ──────────────────────────────────── -->
+                    <div class="track-hero">
+                        <!-- Nếu là VIDEO, hiển thị Player Video -->
+                        <div th:if="${track.type.name() == 'VIDEO'}" class="track-video-container"
+                            style="width: 100%; border-radius: 12px; overflow: hidden; background: #000;">
+                            <video controls style="width: 100%; max-height: 500px; display: block;"
+                                th:poster="${track.posterFilename != null ? '/stream/' + track.posterFilename : ''}">
+                                <source th:src="@{'/stream/' + ${track.fileName}}" type="video/mp4">
+                                Trình duyệt của bạn không hỗ trợ thẻ video.
+                            </video>
+                        </div>
+
+                        <!-- Nếu là AUDIO, hiển thị cấu trúc cũ kèm Waveform -->
+                        <div th:if="${track.type.name() == 'AUDIO'}"
+                            style="display: flex; gap: 24px; width: 100%; z-index: 2; position: relative;">
+                            <!-- Artwork / Cover -->
+                            <div class="track-hero-cover"
+                                style="position:relative; overflow:hidden; border-radius:12px; flex-shrink: 0;">
+                                <img th:if="${track.posterFilename != null}"
+                                    th:src="@{'/stream/' + ${track.posterFilename}}"
+                                    style="width:100%; height:100%; object-fit:cover;">
+                                <span th:if="${track.posterFilename == null}" class="track-hero-emoji">🎵</span>
+                                <div class="track-hero-cover-glow"></div>
+                            </div>
+
+                            <!-- Backdrop background -->
+                            <div th:if="${track.posterFilename != null}" class="track-hero-backdrop"
+                                th:style="'background-image: url(/stream/' + ${track.posterFilename} + ');'">
+                            </div>
+
+                            <!-- Info -->
+                            <div class="track-hero-info" style="flex: 1; display: flex; flex-direction: column;">
+                                <span class="track-hero-type">BÀI HÁT</span>
+                                <h1 class="track-hero-title" th:text="${track.title}">Tên bài hát</h1>
+                                <div class="track-hero-meta">
+                                    <span class="track-hero-artist" th:text="${track.artist}">Ca sĩ</span>
+                                    <span class="track-hero-sep">•</span>
+                                    <span th:if="${track.genre != null and !track.genre.isEmpty()}" class="genre-chip"
+                                        style="font-size:11px; padding:2px 10px; margin:0;"
+                                        th:text="${track.genre}"></span>
+                                    <span class="track-hero-sep" th:if="${track.durationSeconds != null}">•</span>
+                                    <span class="track-hero-duration" th:if="${track.durationSeconds != null}"
+                                        th:text="${#numbers.formatInteger(track.durationSeconds / 60, 1) + ':' + #numbers.formatInteger(track.durationSeconds % 60, 2)}">
+                                    </span>
+                                    <span class="track-hero-sep" th:if="${track.playCount > 0}">•</span>
+                                    <span th:if="${track.playCount > 0}" style="font-size:13px; color:#b3b3b3;"
+                                        th:text="${track.playCount} + ' lượt nghe'"></span>
+                                </div>
+
+                                <!-- Waveform container cho thư viện Wavesurfer -->
+                                <div id="waveform" style="width: 100%; margin-top: auto; padding-top: 20px;"></div>
+                                <!-- Audio file path embedded for JS -->
+                                <input type="hidden" id="track-audio-src" th:value="@{'/stream/' + ${track.fileName}}">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Các nút hành động ────────────────────────────── -->
+                    <div class="track-actions">
+                        <!-- Nút PHÁT TO -->
+                        <button id="btn-track-play" class="track-play-btn-big" th:data-id="${track.id}"
+                            th:data-title="${track.title}" th:data-artist="${track.artist}"
+                            th:data-src="@{'/stream/' + ${track.fileName}}" th:data-type="${track.type}"
+                            th:data-genre="${track.genre}" th:data-emotion="${track.emotionLabel}"
+                            th:data-lyrics="${track.lyrics}" th:data-poster="${track.posterFilename}">
+                            <svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28">
+                                <path d="M8 5v14l11-7z" />
+                            </svg>
+                            Phát
+                        </button>
+
+                        <!-- Nút Yêu thích -->
+                        <button id="btn-track-like" th:data-id="${track.id}" class="track-action-icon-btn"
+                            th:classappend="${liked ? ' liked' : ''}" title="Thêm vào thư viện">
+                            <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
+                                <path
+                                    d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                        </button>
+
+                        <!-- Nút Thêm vào playlist -->
+                        <button class="track-action-icon-btn" data-action="add-to-playlist"
+                            th:data-media-id="${track.id}" title="Thêm vào playlist">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                                <path d="M3 7h14v2H3V7zm0 4h14v2H3v-2zm0 4h10v2H3v-2zm16-6v8l4-4-4-4z" />
+                            </svg>
+                        </button>
+
+                        <!-- Nút Thêm vào hàng chờ -->
+                        <button id="btn-track-queue" class="track-action-icon-btn" th:data-id="${track.id}"
+                            th:data-title="${track.title}" th:data-artist="${track.artist}"
+                            th:data-src="@{'/stream/' + ${track.fileName}}" th:data-type="${track.type}"
+                            th:data-genre="${track.genre}" th:data-emotion="${track.emotionLabel}"
+                            th:data-lyrics="${track.lyrics}" th:data-poster="${track.posterFilename}"
+                            title="Thêm vào hàng chờ">
+                            <svg viewBox="0 0 24 24" width="22" height="22" fill="currentColor">
+                                <path d="M3 7h14v2H3V7zm0 4h10v2H3v-2zm12 4v-4l5 3-5 3zm-12 0h8v2H3v-2z" />
+                            </svg>
+                        </button>
+                    </div>
+
+                    <!-- ── Tabs Thông tin ────────────────────────────────── -->
+                    <div class="track-tabs-container" style="margin-top: 30px;">
+                        <div class="track-tabs-header">
+                            <button class="track-tab-btn active" data-tab="desc">Mô tả</button>
+                            <button class="track-tab-btn" data-tab="lyrics">Bản chép lời</button>
+                        </div>
+
+                        <div class="track-tab-content active" id="tab-desc">
+                            <div class="track-info-card"
+                                th:if="${track.emotionLabel != null and !track.emotionLabel.isEmpty()}">
+                                <div class="track-info-label">Cảm xúc</div>
+                                <div class="track-info-value" th:text="${track.emotionLabel}">Chill</div>
+                            </div>
+                            <div class="track-info-card" th:if="${track.genre != null and !track.genre.isEmpty()}">
+                                <div class="track-info-label">Thể loại</div>
+                                <div class="track-info-value" th:text="${track.genre}">Pop</div>
+                            </div>
+                        </div>
+
+                        <div class="track-tab-content" id="tab-lyrics">
+                            <div class="lyrics-card">
+                                <pre th:if="${track.lyrics != null and !track.lyrics.trim().isEmpty()}"
+                                    th:text="${track.lyrics}" class="lyrics-pre"></pre>
+                                <div th:unless="${track.lyrics != null and !track.lyrics.trim().isEmpty()}"
+                                    class="no-lyrics">
+                                    🎶 (Đang tạo lời tự động...)
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Bài tương tự ──────────────────────────────────── -->
+                     <div class="section-block" th:if="${!#lists.isEmpty(similar)}" style="margin-top:40px;">
+                        <div class="section-header">
+                            <span class="section-title">🎵 Nghe tiếp</span>
+                        </div>
+                        <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                            <div th:each="item : ${similar}" class="media-card">
+                                <div class="media-card-artwork">
+                                    <img th:if="${item.posterFilename != null}" 
+                                         th:src="@{'/stream/' + ${item.posterFilename}}" 
+                                         style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
+                                    <a th:href="@{'/track/' + ${item.id}}" class="media-card-link-overlay"></a>
+                                    <span th:if="${item.posterFilename == null}" class="media-card-artwork-icon" th:text="${item.type.name() == 'VIDEO' ? '🎬' : '🎵'}">🎵</span>
+                                    <span class="media-card-type-badge"
+                                          th:classappend="${item.type.name() == 'VIDEO' ? 'badge-video' : 'badge-audio'}"
+                                          th:text="${item.type}">AUDIO</span>
+                                    <button class="media-play-btn"
+                                            th:data-id="${item.id}"
+                                            th:data-title="${item.title}"
+                                            th:data-artist="${item.artist}"
+                                            th:data-src="@{'/stream/' + ${item.fileName}}"
+                                            th:data-type="${item.type}"
+                                            th:data-genre="${item.genre}"
+                                            th:data-emotion="${item.emotionLabel}"
+                                            th:data-lyrics="${item.lyrics}"
+                                            th:data-poster="${item.posterFilename}"
+                                            aria-label="Phát">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    </button>
+                                    <div class="card-actions">
+                                        <button class="card-action-btn" data-action="queue" title="Thêm vào hàng chờ">+</button>
+                                        <button class="card-action-btn" data-action="add-to-playlist"
+                                                th:data-media-id="${item.id}" title="Thêm vào playlist">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="media-card-title">
+                                    <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài</a>
+                                </div>
+                                <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Có thể bạn sẽ thích ──────────────────────────────────── -->
+                    <div class="section-block" th:if="${!#lists.isEmpty(recommendations)}" style="margin-top:60px;">
+                        <div class="section-header">
+                            <span class="section-title">🌟 Có thể bạn sẽ thích</span>
+                        </div>
+                        <table class="track-table">
+                            <thead>
+                                <tr>
+                                    <th class="track-num">#</th>
+                                    <th>BÀI HÁT</th>
+                                    <th>CA SĨ</th>
+                                    <th>THỂ LOẠI</th>
+                                    <th>THỜI LƯỢNG</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="s, stat : ${recommendations}" class="track-row">
+                                    <td class="track-num">
+                                        <span class="track-num-label" th:text="${stat.index + 1}">1</span>
+                                        <button class="track-play-btn media-play-btn" th:data-id="${s.id}"
+                                            th:data-title="${s.title}" th:data-artist="${s.artist}"
+                                            th:data-src="@{'/stream/' + ${s.fileName}}" th:data-type="${s.type}"
+                                            th:data-genre="${s.genre}" th:data-emotion="${s.emotionLabel}"
+                                            th:data-lyrics="${s.lyrics}" th:data-poster="${s.posterFilename}">▶</button>
+                                    </td>
+                                    <td>
+                                        <a th:href="@{'/track/' + ${s.id}}" class="track-title-cell"
+                                            style="text-decoration:none; color:inherit;" th:text="${s.title}">Tên
+                                            bài</a>
+                                    </td>
+                                    <td class="track-artist-cell" th:text="${s.artist}">Ca sĩ</td>
+                                    <td>
+                                        <span th:if="${s.genre}" class="genre-chip"
+                                            style="font-size:10px; padding:2px 8px; margin:0;"
+                                            th:text="${s.genre}"></span>
+                                    </td>
+                                    <td class="track-duration-cell"
+                                        th:text="${s.durationSeconds != null ? (#numbers.formatInteger(s.durationSeconds/60,1) + ':' + #numbers.formatInteger(s.durationSeconds%60, 2)) : '--'}">
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- ── Nhạc Mới ───────────────── -->
+                    <div class="section-block" th:if="${!#lists.isEmpty(recommendations)}" style="margin-top:60px;">
+                        <div class="section-header">
+                            <span class="section-title">🎧 Nhạc Mới</span>
+                        </div>
+                        <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                            <div th:each="item : ${recommendations}" class="media-card">
+                                <div class="media-card-artwork">
+                                    <img th:if="${item.posterFilename != null}" 
+                                         th:src="@{'/stream/' + ${item.posterFilename}}" 
+                                         style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
+                                    <a th:href="@{'/track/' + ${item.id}}" class="media-card-link-overlay"></a>
+                                    <span th:if="${item.posterFilename == null}" class="media-card-artwork-icon" th:text="${item.type.name() == 'VIDEO' ? '🎬' : '🎵'}">🎵</span>
+                                    <span class="media-card-type-badge"
+                                          th:classappend="${item.type.name() == 'VIDEO' ? 'badge-video' : 'badge-audio'}"
+                                          th:text="${item.type}">AUDIO</span>
+                                    <button class="media-play-btn"
+                                            th:data-id="${item.id}"
+                                            th:data-title="${item.title}"
+                                            th:data-artist="${item.artist}"
+                                            th:data-src="@{'/stream/' + ${item.fileName}}"
+                                            th:data-type="${item.type}"
+                                            th:data-genre="${item.genre}"
+                                            th:data-emotion="${item.emotionLabel}"
+                                            th:data-lyrics="${item.lyrics}"
+                                            th:data-poster="${item.posterFilename}"
+                                            aria-label="Phát">
+                                        <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                    </button>
+                                    <div class="card-actions">
+                                        <button class="card-action-btn" data-action="queue" title="Thêm vào hàng chờ">+</button>
+                                        <button class="card-action-btn" data-action="add-to-playlist"
+                                                th:data-media-id="${item.id}" title="Thêm vào playlist">
+                                            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="media-card-title">
+                                    <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài</a>
+                                </div>
+                                <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- ── Bình luận ───────────────── -->
+                    <div class="section-block" style="margin-top:60px;">
+                        <div class="section-header">
+                            <span class="section-title" id="comment-section-title">Bình Luận</span>
+                        </div>
+                        <div class="track-comments-section" style="padding: 20px; background: #181818; border-radius: 8px;">
+                            <div sec:authorize="isAuthenticated()" style="display: flex; gap: 12px; margin-bottom: 24px;">
+                                <input type="text" id="comment-input" placeholder="Viết bình luận của bạn..."
+                                    style="flex: 1; background: #282828; color: #fff; border: 1px solid #333; border-radius: 20px; padding: 10px 16px; font-size: 14px; outline: none;">
+                                <button id="btn-post-comment" th:data-id="${track.id}"
+                                    style="background: #1db954; color: #000; border: none; font-weight: 700; border-radius: 20px; padding: 0 20px; cursor: pointer;">Gửi</button>
+                            </div>
+                            <div sec:authorize="!isAuthenticated()" style="margin-bottom: 24px; color: #b3b3b3; font-size: 14px;">
+                                Vui lòng <a th:href="@{/login}" style="color: #1db954; font-weight: bold;">đăng nhập</a> để bình luận.
+                            </div>
+
+                            <!-- Comment List -->
+                            <div id="comment-list" style="display: flex; flex-direction: column; gap: 16px;">
+                                <div style="color: #b3b3b3; font-size: 14px; text-align: center;">Đang tải bình luận...</div>
+                            </div>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="height:120px;"></div>
+            </main>
+
+            <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+            <div th:replace="~{fragments :: right-sidebar}"></div>
+        </div>
+        <div th:replace="~{fragments :: global-player}"></div>
+    </div>
+
+    <!-- Playlist modal (cần ID này để JS hoạt động) -->
+    <div class="playlist-modal-overlay hidden" id="playlist-modal-overlay">
+        <div class="playlist-modal" id="playlist-modal">
+            <div class="playlist-modal-header">
+                <h3>Thêm vào playlist</h3>
+                <button class="playlist-modal-close" id="btn-close-playlist-modal">✕</button>
+            </div>
+            <div class="playlist-modal-body" id="playlist-modal-list">
+                <div style="text-align:center; color:#b3b3b3; padding:20px;">Đang tải...</div>
+            </div>
+            <div class="playlist-modal-footer">
+                <a href="/playlists" style="font-size:13px; color:#1db954;">+ Tạo playlist mới</a>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            // Nút PHÁT TO — kích hoạt player bar
+            const btnPlay = document.getElementById('btn-track-play');
+            if (btnPlay) {
+                btnPlay.addEventListener('click', function () {
+                    // Trigger qua class media-play-btn để app.js xử lý
+                    const clone = document.createElement('button');
+                    clone.className = 'media-play-btn';
+                    ['id', 'title', 'artist', 'src', 'type', 'genre', 'emotion', 'lyrics', 'poster'].forEach(k => {
+                        if (btnPlay.dataset[k]) clone.dataset[k] = btnPlay.dataset[k];
+                    });
+                    clone.style.display = 'none';
+                    document.body.appendChild(clone);
+                    clone.click();
+                    document.body.removeChild(clone);
+                });
+            }
+
+            // Nút Thêm vào hàng chờ
+            const btnQueue = document.getElementById('btn-track-queue');
+            if (btnQueue) {
+                btnQueue.addEventListener('click', function () {
+                    const track = {
+                        id: btnQueue.dataset.id, title: btnQueue.dataset.title,
+                        artist: btnQueue.dataset.artist, src: btnQueue.dataset.src,
+                        type: btnQueue.dataset.type || 'AUDIO',
+                        genre: btnQueue.dataset.genre || '', emotion: btnQueue.dataset.emotion || '',
+                        lyrics: btnQueue.dataset.lyrics || '', poster: btnQueue.dataset.poster || ''
+                    };
+                    document.body.dispatchEvent(new CustomEvent('km:addToQueue', { detail: track }));
+                });
+            }
+
+            // Nút Like
+            const btnLike = document.getElementById('btn-track-like');
+            if (btnLike) {
+                btnLike.addEventListener('click', async function () {
+                    const mediaId = btnLike.dataset.id;
+                    if (!mediaId) return;
+                    try {
+                        const res = await fetch('/api/library/toggle', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+                            body: 'mediaItemId=' + mediaId
+                        });
+                        if (res.status === 401) { alert('Hãy đăng nhập để yêu thích!'); return; }
+                        const data = await res.json();
+                        btnLike.classList.toggle('liked', data.liked);
+                    } catch (e) { console.error('Lỗi toggle thả tim', e); }
+                });
+            }
+
+            // Tabs logic
+            const tabBtns = document.querySelectorAll('.track-tab-btn');
+            const tabContents = document.querySelectorAll('.track-tab-content');
+            tabBtns.forEach(btn => {
+                btn.addEventListener('click', () => {
+                    tabBtns.forEach(b => b.classList.remove('active'));
+                    tabContents.forEach(c => c.classList.remove('active'));
+                    btn.classList.add('active');
+                    const target = document.getElementById('tab-' + btn.dataset.tab);
+                    if (target) target.classList.add('active');
+                });
+            });
+        });
+    </script>
+</body>
+
+</html>

@@ -1,71 +1,356 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>KangMusic</title>
-    
-    <link rel="stylesheet" th:href="@{/css/common.css}">
-    <link rel="stylesheet" th:href="@{/css/index.css}">
-</head>
+<head th:replace="~{fragments :: head('Trang chủ - KangMusic')}"></head>
 <body>
 
-    <div class="container">
-        
-        <div class="top-nav">
-            
-            <div sec:authorize="isAnonymous()">
-                <a th:href="@{/login}" class="auth-btn login-btn">Đăng nhập</a>
-                <a th:href="@{/register}" class="auth-btn register-btn">Đăng ký</a>
-            </div>
+<div class="page-wrapper">
+    <!-- TOP BAR -->
+    <div th:replace="~{fragments :: top-bar}"></div>
 
-            <div sec:authorize="isAuthenticated()" class="user-dropdown">
-                <button class="dropbtn">
-                    Xin chào, <span sec:authentication="name" style="margin: 0 5px; text-decoration: underline;">User</span> ▼
-                </button>
-                <div class="dropdown-content">
-                    <a th:href="@{/profile}">👤 Hồ sơ cá nhân</a>
-                    
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}">🛠️ Trang Quản Trị</a>
-                    
-                    <form th:action="@{/logout}" method="post" style="margin: 0;">
-                        <button type="submit" class="dropdown-logout">🚪 Đăng xuất</button>
-                    </form>
+    <div class="main-layout">
+
+        <!-- LIBRARY SIDEBAR -->
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+
+        <!-- MAIN CONTENT -->
+        <main class="content-area" id="main-content" th:fragment="main-content">
+
+            <!-- ── Sticky header ───────────────────────────────── -->
+            <div class="content-header">
+                <div class="content-nav-btns">
+                    <button class="content-nav-btn" onclick="history.back()" aria-label="Quay lại">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
+                    </button>
+                    <button class="content-nav-btn" onclick="history.forward()" aria-label="Tiếp theo">
+                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                    </button>
+                </div>
+                <div class="content-header-right">
+                    <div class="add-btn-container" sec:authorize="hasAuthority('ROLE_ADMIN')">
+                        <a th:href="@{/add}" class="add-btn">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            Thêm bài hát
+                        </a>
+                    </div>
                 </div>
             </div>
+
+            <div class="content-body">
+                <h1 class="page-greeting">Chào mừng đến KangMusic 🎵</h1>
+
+                <!-- ── Explore Genres (Visible when not searching) ───────────────── -->
+                <div class="section-block" th:if="${(query == null or query == '') and (selectedGenre == null or selectedGenre == '')}">
+                    <div class="section-header">
+                        <h2 class="section-title">✨ Khám phá thể loại</h2>
+                    </div>
+                    <div class="explore-grid" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                        <a th:href="@{/(genre='RELAX')}" class="genre-card bg-relax">
+                            <h3 class="genre-card-title">Thư giãn</h3>
+                            <span class="genre-card-art">🧘‍♂️</span>
+                        </a>
+                        <a th:href="@{/(genre='PARTY')}" class="genre-card bg-party">
+                            <h3 class="genre-card-title">Tiệc tùng</h3>
+                            <span class="genre-card-art">🥳</span>
+                        </a>
+                        <a th:href="@{/(genre='CHILL')}" class="genre-card bg-chill">
+                            <h3 class="genre-card-title">Chill</h3>
+                            <span class="genre-card-art">🏜️</span>
+                        </a>
+                        <a th:href="@{/(genre='SAD')}" class="genre-card bg-sad">
+                            <h3 class="genre-card-title">Tâm trạng</h3>
+                            <span class="genre-card-art">💔</span>
+                        </a>
+                        <a th:href="@{/(genre='ENERGETIC')}" class="genre-card bg-energetic">
+                            <h3 class="genre-card-title">Năng lượng</h3>
+                            <span class="genre-card-art">⚡</span>
+                        </a>
+                        <a th:href="@{/(genre='VIET_POP')}" class="genre-card bg-vietpop">
+                            <h3 class="genre-card-title">V-Pop</h3>
+                            <span class="genre-card-art">🇻🇳</span>
+                        </a>
+                        <a th:href="@{/(genre='INDIE')}" class="genre-card bg-indie">
+                            <h3 class="genre-card-title">Indie</h3>
+                            <span class="genre-card-art">🎸</span>
+                        </a>
+                        <a th:href="@{/(genre='LOFI')}" class="genre-card bg-lofi">
+                            <h3 class="genre-card-title">Lo-fi</h3>
+                            <span class="genre-card-art">☕</span>
+                        </a>
+                    </div>
+                </div>
+
+
+
+                <!-- ── Genre Chips ─────────────────────────────── -->
+                <div class="genre-chips" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                    <a th:href="@{/(query=${query}, genre='')}"
+                       th:classappend="${(selectedGenre == null or selectedGenre == '') ? ' active' : ''}"
+                       class="genre-chip">
+                        🎵 Tất cả
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='VIET_POP')}"
+                       th:classappend="${selectedGenre == 'VIET_POP' ? ' active' : ''}"
+                       class="genre-chip">
+                        🎤 Việt Pop
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='RELAX')}"
+                       th:classappend="${selectedGenre == 'RELAX' ? ' active' : ''}"
+                       class="genre-chip">
+                        🌿 Thư giãn
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='PARTY')}"
+                       th:classappend="${selectedGenre == 'PARTY' ? ' active' : ''}"
+                       class="genre-chip">
+                        🎉 Tiệc tùng
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='CHILL')}"
+                       th:classappend="${selectedGenre == 'CHILL' ? ' active' : ''}"
+                       class="genre-chip">
+                        🌙 Chill
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='SAD')}"
+                       th:classappend="${selectedGenre == 'SAD' ? ' active' : ''}"
+                       class="genre-chip">
+                        😢 Buồn
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='ENERGETIC')}"
+                       th:classappend="${selectedGenre == 'ENERGETIC' ? ' active' : ''}"
+                       class="genre-chip">
+                        ⚡ Năng lượng
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='INDIE')}"
+                       th:classappend="${selectedGenre == 'INDIE' ? ' active' : ''}"
+                       class="genre-chip">
+                        🎸 Indie
+                    </a>
+                    <a th:href="@{/(query=${query}, genre='LOFI')}"
+                       th:classappend="${selectedGenre == 'LOFI' ? ' active' : ''}"
+                       class="genre-chip">
+                        ☕ Lo-fi
+                    </a>
+                </div>
+
+                <!-- ── Section: Đề xuất hôm nay ───────────────── -->
+                <div class="section-block" th:if="${!#lists.isEmpty(todayPicks)}">
+                    <div class="section-header">
+                        <span class="section-title">🔥 Đề xuất hôm nay</span>
+                    </div>
+                    <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                        <div th:each="m : ${todayPicks}" class="media-card">
+                            <div class="media-card-artwork">
+                                <img th:if="${m.posterFilename != null}" 
+                                     th:src="@{'/stream/' + ${m.posterFilename}}" 
+                                     style="width:100%; height:100%; object-fit:cover;">
+                                <div th:if="${m.posterFilename == null}" class="media-card-artwork-icon" 
+                                     th:text="${m.type.name() == 'VIDEO' ? '🎬' : '🎵'}">🎵</div>
+                                
+                                <div class="media-card-type-badge" 
+                                     th:classappend="${m.type.name() == 'VIDEO' ? 'badge-video' : 'badge-audio'}"
+                                     th:text="${m.type}">AUDIO</div>
+
+                                <button class="media-play-btn"
+                                        th:data-id="${m.id}"
+                                        th:data-title="${m.title}"
+                                        th:data-artist="${m.artist}"
+                                        th:data-src="@{'/stream/' + ${m.fileName}}"
+                                        th:data-type="${m.type}"
+                                        th:data-genre="${m.genre}"
+                                        th:data-emotion="${m.emotionLabel}"
+                                        th:data-lyrics="${m.lyrics}"
+                                        th:data-poster="${m.posterFilename}"
+                                        title="Phát">
+                                    <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M8 5v14l11-7z"/></svg>
+                                </button>
+                                <!-- Nút thêm vào queue -->
+                                <div class="card-actions">
+                                    <button class="card-action-btn" data-action="queue" title="Thêm vào hàng chờ">+</button>
+                                    <button class="card-action-btn" data-action="add-to-playlist"
+                                            th:data-media-id="${m.id}" title="Thêm vào playlist">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="media-card-title">
+                                <a th:href="@{'/track/' + ${m.id}}" th:text="${m.title}">Tên bài</a>
+                            </div>
+                            <div class="media-card-artist" th:text="${m.artist}">Ca sĩ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Section: Nhạc mới ra ────────────────────── -->
+                <div class="section-block" th:if="${!#lists.isEmpty(newReleases)}">
+                    <div class="section-header">
+                        <span class="section-title">✨ Nhạc mới ra</span>
+                    </div>
+                    <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                        <div th:each="item : ${newReleases}" class="media-card">
+                            <div class="media-card-artwork">
+                                <img th:if="${item.posterFilename != null}" 
+                                     th:src="@{'/stream/' + ${item.posterFilename}}" 
+                                     style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
+                                <a th:href="@{'/track/' + ${item.id}}" class="media-card-link-overlay"></a>
+                                <span th:if="${item.posterFilename == null}" class="media-card-artwork-icon" th:text="${item.type.name() == 'VIDEO' ? '🎬' : '🎵'}">🎵</span>
+                                <span class="media-card-type-badge"
+                                      th:classappend="${item.type.name() == 'VIDEO' ? 'badge-video' : 'badge-audio'}"
+                                      th:text="${item.type}">AUDIO</span>
+                                <button class="media-play-btn"
+                                        th:data-id="${item.id}"
+                                        th:data-title="${item.title}"
+                                        th:data-artist="${item.artist}"
+                                        th:data-src="@{'/stream/' + ${item.fileName}}"
+                                        th:data-type="${item.type}"
+                                        th:data-genre="${item.genre}"
+                                        th:data-emotion="${item.emotionLabel}"
+                                        th:data-lyrics="${item.lyrics}"
+                                        th:data-poster="${item.posterFilename}"
+                                        aria-label="Phát">
+                                    <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                                </button>
+                                <div class="card-actions">
+                                    <button class="card-action-btn" data-action="queue" title="Thêm vào hàng chờ">+</button>
+                                    <button class="card-action-btn" data-action="add-to-playlist"
+                                            th:data-media-id="${item.id}" title="Thêm vào playlist">
+                                        <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                    </button>
+                                </div>
+                            </div>
+                            <div class="media-card-title">
+                                <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài</a>
+                            </div>
+                            <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Thư Viện Nhạc (main grid) ───────────────── -->
+                <div class="section-header">
+                    <h2 class="section-title">🎧 Thư Viện Nhạc</h2>
+                    <span class="pagination-info"
+                          th:if="${totalPages > 0}"
+                          th:text="'Trang ' + (${currentPage} + 1) + ' / ' + ${totalPages}">
+                    </span>
+                </div>
+
+                <!-- Empty state -->
+                <div th:if="${#lists.isEmpty(mediaList) and (query == null or query == '') and (selectedGenre == null or selectedGenre == '')}"
+                     class="empty-state">
+                    <div class="empty-state-icon">🎵</div>
+                    <div class="empty-state-title">Chưa có bài hát nào</div>
+                    <p class="empty-state-desc">Hãy thêm bài hát đầu tiên vào thư viện!</p>
+                </div>
+                <div th:if="${#lists.isEmpty(mediaList) and (query != null and query != '' or (selectedGenre != null and selectedGenre != ''))}"
+                     class="empty-state">
+                    <div class="empty-state-icon">🔍</div>
+                    <div class="empty-state-title">Không tìm thấy kết quả</div>
+                    <p class="empty-state-desc">Thử thể loại khác hoặc từ khóa khác.</p>
+                </div>
+
+                <!-- Media grid -->
+                <div class="media-grid" id="media-grid-container" th:unless="${#lists.isEmpty(mediaList)}"
+                     hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                    <div th:each="item : ${mediaList}" class="media-card">
+                            <div class="media-card-artwork">
+                                <img th:if="${item.posterFilename != null}" 
+                                     th:src="@{'/stream/' + ${item.posterFilename}}" 
+                                     style="width:100%; height:100%; object-fit:cover; position:absolute; inset:0;">
+                                <a th:href="@{'/track/' + ${item.id}}" class="media-card-link-overlay"></a>
+                                <span th:if="${item.posterFilename == null}" class="media-card-artwork-icon" th:text="${item.type.name() == 'VIDEO' ? '🎬' : '🎵'}">🎵</span>
+                                <span class="media-card-type-badge"
+                                  th:classappend="${item.type.name() == 'VIDEO' ? 'badge-video' : 'badge-audio'}"
+                                  th:text="${item.type}">AUDIO</span>
+                            <button class="media-play-btn"
+                                    th:data-id="${item.id}"
+                                    th:data-title="${item.title}"
+                                    th:data-artist="${item.artist}"
+                                    th:data-src="@{'/stream/' + ${item.fileName}}"
+                                    th:data-type="${item.type}"
+                                    th:data-genre="${item.genre}"
+                                    th:data-emotion="${item.emotionLabel}"
+                                    th:data-lyrics="${item.lyrics}"
+                                    th:data-poster="${item.posterFilename}"
+                                    aria-label="Phát bài hát">
+                                <svg viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                            </button>
+                            <!-- Card actions -->
+                            <div class="card-actions">
+                                <button class="card-action-btn" data-action="queue" title="Thêm vào hàng chờ">+</button>
+                                <button class="card-action-btn" data-action="add-to-playlist"
+                                        th:data-media-id="${item.id}" title="Thêm vào playlist">
+                                    <svg viewBox="0 0 24 24" width="13" height="13" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="media-card-title">
+                            <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài hát</a>
+                        </div>
+                        <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                        <div class="media-card-meta">
+                            <span th:if="${item.genre}"
+                                  class="genre-chip" style="font-size:10px; padding:2px 8px; margin:0;"
+                                  th:text="${item.genre}"></span>
+                            <span class="media-card-duration"
+                                  th:if="${item.durationSeconds != null}"
+                                  th:text="${#numbers.formatInteger(item.durationSeconds / 60, 1)} + ':' + ${#numbers.formatInteger(item.durationSeconds % 60, 2)}"
+                                  style="font-size:11px; color:#b3b3b3; margin-left: auto;">0:00</span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- ── Pagination ───────────────────────────────── -->
+                <div class="pagination-controls" th:if="${totalPages > 1}">
+                    <a class="pagination-btn"
+                       th:classappend="${!hasPrev} ? ' disabled' : ''"
+                       th:href="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage - 1})}"
+                       hx-get="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage - 1})}"
+                       hx-target="#main-content" hx-push-url="true">
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
+                        </svg>
+                        Trước
+                    </a>
+                    <span class="pagination-page-indicator"
+                          th:text="'Trang ' + (${currentPage} + 1) + ' / ' + ${totalPages}"></span>
+                    <a class="pagination-btn"
+                       th:classappend="${!hasNext} ? ' disabled' : ''"
+                       th:href="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage + 1})}"
+                       hx-get="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage + 1})}"
+                       hx-target="#main-content" hx-push-url="true">
+                        Tiếp
+                        <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
+                            <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>
+                        </svg>
+                    </a>
+                </div>
+
+            </div>
+
+            <div style="height: 120px;"></div>
+        </main>
+
+        <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+        <div th:replace="~{fragments :: right-sidebar}"></div>
+    </div>
+
+    <div th:replace="~{fragments :: global-player}"></div>
+
+<!-- PLAYLIST MODAL -->
+<div class="playlist-modal-overlay hidden" id="playlist-modal-overlay">
+    <div class="playlist-modal" id="playlist-modal">
+        <div class="playlist-modal-header">
+            <h3>Thêm vào playlist</h3>
+            <button class="playlist-modal-close" id="btn-close-playlist-modal">✕</button>
         </div>
-
-        <h1>🎵 Thư Viện Giải Trí</h1>
-
-        <div class="add-btn-container" sec:authorize="hasAuthority('ROLE_ADMIN')">
-            <a th:href="@{/add}" class="add-btn">➕ Thêm bài hát mới</a>
+        <div class="playlist-modal-body" id="playlist-modal-list">
+            <div style="text-align:center; color:#b3b3b3; padding:20px;">Đang tải...</div>
         </div>
-
-        <div class="media-grid">
-            <div th:each="item : ${mediaList}" class="media-card">
-                
-                <span class="badge" th:text="${item.emotionLabel}">Vui vẻ</span>
-                
-                <h3 th:text="${item.title}">Tên bài hát</h3>
-                <p th:text="${item.artist}">Ca sĩ</p>
-
-                <div th:if="${item.type == 'AUDIO'}">
-                    <audio controls>
-                        <source th:src="@{'/media/' + ${item.fileName}}" type="audio/mpeg">
-                        Trình duyệt không hỗ trợ thẻ audio.
-                    </audio>
-                </div>
-
-                <div th:if="${item.type == 'VIDEO'}">
-                    <video controls>
-                        <source th:src="@{'/media/' + ${item.fileName}}" type="video/mp4">
-                        Trình duyệt không hỗ trợ thẻ video.
-                    </video>
-                </div>
-
-            </div>
+        <div class="playlist-modal-footer">
+            <a href="/playlists" style="font-size:13px; color:#1db954;">+ Tạo playlist mới</a>
         </div>
     </div>
+</div>
+</div>
 
 </body>
 </html>

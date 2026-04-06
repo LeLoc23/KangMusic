@@ -1,29 +1,28 @@
 package com.musicapp.controllers;
 
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.security.crypto.password.PasswordEncoder;
+import com.musicapp.exception.WeakPasswordException;
+import com.musicapp.services.AuthService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
-import org.springframework.web.bind.annotation.PostMapping; 
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.musicapp.models.User;
-import com.musicapp.repositories.UserRepository;
-import com.musicapp.services.EmailService; 
-
+/**
+ * M1 FIX: Controller delegates all business logic to AuthService.
+ * M6 FIX: Forgot-password always shows a neutral success message (no user enumeration).
+ * M8 FIX: Reset link uses dynamic base URL from HttpServletRequest.
+ * C4 FIX: Token expiry validated inside AuthService.
+ * I1 FIX: Constructor injection.
+ */
 @Controller
 public class AuthController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final AuthService authService;
 
-    @Autowired
-    private EmailService emailService;
-
-    // THÊM MỚI: Gọi công cụ mã hóa mật khẩu vào làm việc
-    @Autowired
-    private PasswordEncoder passwordEncoder;
+    public AuthController(AuthService authService) {
+        this.authService = authService;
+    }
 
     @GetMapping("/login")
     public String loginPage() {
@@ -35,102 +34,55 @@ public class AuthController {
         return "register";
     }
 
-    // ==========================================
-    // HÀM XỬ LÝ KHI NGƯỜI DÙNG BẤM NÚT ĐĂNG KÝ
-    // ==========================================
     @PostMapping("/register")
     public String registerUser(
-            @RequestParam(required = false, defaultValue = "") String fullName, 
-            @RequestParam String email, 
+            @RequestParam(required = false, defaultValue = "") String fullName,
+            @RequestParam String email,
             @RequestParam String username,
             @RequestParam String password,
             @RequestParam String confirmPassword,
-            Model model) { 
+            Model model) {
 
-        if (username.trim().isEmpty() || password.trim().isEmpty() || email.trim().isEmpty()) {
-            model.addAttribute("error", "Email, Tên đăng nhập và Mật khẩu không được để trống!");
-            return "register";
+        try {
+            authService.registerUser(username, password, confirmPassword, email, fullName);
+            return "redirect:/login?success=true";
+        } catch (WeakPasswordException e) {
+            model.addAttribute("error", "Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 số và 1 ký hiệu đặc biệt!");
+        } catch (IllegalArgumentException e) {
+            model.addAttribute("error", mapError(e.getMessage()));
         }
-
-        if (userRepository.findByUsername(username) != null) {
-            model.addAttribute("error", "Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác!");
-            return "register";
-        }
-
-        if (userRepository.findByEmail(email) != null) {
-            model.addAttribute("error", "Email này đã được đăng ký cho một tài khoản khác!");
-            return "register";
-        }
-
-        if (!password.matches("^(?=.*[A-Z]).{6,}$")) {
-            model.addAttribute("error", "Mật khẩu phải có ít nhất 6 ký tự và chứa ít nhất 1 chữ viết hoa!");
-            return "register";
-        }
-
-        if (!password.equals(confirmPassword)) {
-            model.addAttribute("error", "Mật khẩu nhập lại không khớp!");
-            return "register";
-        }
-
-        // ĐÃ NÂNG CẤP: Băm mật khẩu (passwordEncoder.encode) trước khi tạo User
-        User newUser = new User(username, passwordEncoder.encode(password), email, fullName, "ROLE_USER");
-        userRepository.save(newUser);
-
-        return "redirect:/login?success=true"; 
+        return "register";
     }
 
-    // ==========================================
-    // HÀM XỬ LÝ QUÊN MẬT KHẨU
-    // ==========================================
-    
     @GetMapping("/forgot-password")
     public String forgotPasswordPage() {
         return "forgot-password";
     }
 
+    /**
+     * M6 FIX: Always returns neutral message — no user enumeration.
+     * S10 FIX: baseUrl now injected in AuthService via @Value, not derived from request.
+     */
     @PostMapping("/forgot-password")
     public String processForgotPassword(@RequestParam String email, Model model) {
-        User user = userRepository.findByEmail(email);
-        
-        if (user == null) {
-            model.addAttribute("error", "Không tìm thấy tài khoản nào liên kết với email này!");
-            return "forgot-password";
-        }
-
-        String token = java.util.UUID.randomUUID().toString();
-        user.setResetToken(token); 
-        userRepository.save(user);
-
-        String resetLink = "http://localhost:8080/reset-password?token=" + token;
-        
-        String subject = "Hỗ trợ khôi phục mật khẩu - KangMusic";
-        String text = "Xin chào " + user.getUsername() + ",\n\n"
-                + "Bạn đã yêu cầu đặt lại mật khẩu. Vui lòng nhấn vào đường dẫn bên dưới để đặt mật khẩu mới:\n\n"
-                + resetLink + "\n\n"
-                + "Nếu bạn không yêu cầu, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.\n\n"
-                + "Trân trọng,\nĐội ngũ KangMusic.";
-        
-        emailService.sendEmail(user.getEmail(), subject, text);
-
-        model.addAttribute("success", "Chúng tôi đã gửi đường dẫn khôi phục vào email của bạn. Vui lòng kiểm tra hộp thư!");
+        authService.processForgotPassword(email);  // fire-and-forget
+        model.addAttribute("success",
+                "Nếu email này tồn tại trong hệ thống, chúng tôi đã gửi đường dẫn khôi phục. Vui lòng kiểm tra hộp thư!");
         return "forgot-password";
     }
 
-    // ===========================
-    // HÀM XỬ LÝ ĐẶT LẠI MẬT KHẨU 
-    // ===========================
-
     @GetMapping("/reset-password")
     public String showResetPasswordPage(@RequestParam("token") String token, Model model) {
-        User user = userRepository.findByResetToken(token);
-        
-        if (user == null) {
-            model.addAttribute("error", "Đường dẫn khôi phục không hợp lệ hoặc đã hết hạn!");
-            return "forgot-password"; 
-        }
-
-        model.addAttribute("token", token);
-        return "reset-password";
+        // C4 FIX: validates expiry inside AuthService
+        return authService.findValidResetToken(token)
+                .map(user -> {
+                    model.addAttribute("token", token);
+                    return "reset-password";
+                })
+                .orElseGet(() -> {
+                    model.addAttribute("error", "Đường dẫn khôi phục không hợp lệ hoặc đã hết hạn!");
+                    return "forgot-password";
+                });
     }
 
     @PostMapping("/reset-password")
@@ -140,31 +92,32 @@ public class AuthController {
             @RequestParam("confirmPassword") String confirmPassword,
             Model model) {
 
-        User user = userRepository.findByResetToken(token);
-        
-        if (user == null) {
-            model.addAttribute("error", "Thao tác không hợp lệ!");
-            return "forgot-password";
-        }
-
-        if (!password.matches("^(?=.*[A-Z]).{6,}$")) {
-            model.addAttribute("error", "Mật khẩu phải có ít nhất 6 ký tự và 1 chữ hoa!");
-            model.addAttribute("token", token); 
-            return "reset-password";
-        }
-
-        if (!password.equals(confirmPassword)) {
-            model.addAttribute("error", "Mật khẩu nhập lại không khớp!");
+        try {
+            authService.processResetPassword(token, password, confirmPassword);
+            return "redirect:/login?success=true";
+        } catch (WeakPasswordException e) {
+            model.addAttribute("error", "Mật khẩu phải có ít nhất 8 ký tự, 1 chữ hoa, 1 số và 1 ký hiệu đặc biệt!");
             model.addAttribute("token", token);
             return "reset-password";
+        } catch (IllegalArgumentException e) {
+            if ("mismatch".equals(e.getMessage())) {
+                model.addAttribute("error", "Mật khẩu nhập lại không khớp!");
+                model.addAttribute("token", token);
+                return "reset-password";
+            }
+            model.addAttribute("error", "Đường dẫn khôi phục không hợp lệ hoặc đã hết hạn!");
+            return "forgot-password";
         }
+    }
 
-        // ĐÃ NÂNG CẤP: Băm mật khẩu mới trước khi lưu
-        user.setPassword(passwordEncoder.encode(password));
-        user.setResetToken(null); 
-        
-        userRepository.save(user);
-
-        return "redirect:/login?success=true";
+    private String mapError(String code) {
+        return switch (code) {
+            case "blank_fields" -> "Email, Tên đăng nhập và Mật khẩu không được để trống!";
+            case "username_taken" -> "Tên đăng nhập này đã tồn tại. Vui lòng chọn tên khác!";
+            case "email_taken" -> "Email này đã được đăng ký cho một tài khoản khác!";
+            case "mismatch" -> "Mật khẩu nhập lại không khớp!";
+            case "input_too_long" -> "Tên đăng nhập hoặc email không được quá 50/100 ký tự!";
+            default -> "Đã có lỗi xảy ra. Vui lòng thử lại!";
+        };
     }
 }

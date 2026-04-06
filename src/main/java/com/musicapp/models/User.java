@@ -7,6 +7,8 @@ import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
+import java.time.LocalDateTime;
+
 @Entity
 @Table(name = "users")
 public class User {
@@ -15,32 +17,31 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    // Tên đăng nhập (Bắt buộc và không được trùng lặp)
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 50)   // I5 FIX: length limit
     private String username;
 
-    // Mật khẩu (Sẽ được mã hóa sau)
     @Column(nullable = false)
     private String password;
 
-    // Email (Bắt buộc và không được trùng lặp)
-    @Column(unique = true, nullable = false)
+    @Column(unique = true, nullable = false, length = 100)  // I5 FIX: length limit
     private String email;
 
+    @Column(length = 100)
     private String fullName;
 
-    // Quyền hạn
+    @Column(nullable = false, length = 20)
     private String role;
 
-    // Xác định tài khoản có bị khóa hay không
+    @Column(nullable = false)
     private boolean locked = false;
 
-    //Mã dùng để đặt lại mật khẩu 
     private String resetToken;
+
+    /** C4 FIX: Reset tokens now have an expiry timestamp */
+    private LocalDateTime resetTokenExpiry;
 
     public User() {}
 
-    // Thêm biến email vào hàm khởi tạo
     public User(String username, String password, String email, String fullName, String role) {
         this.username = username;
         this.password = password;
@@ -49,7 +50,7 @@ public class User {
         this.role = role;
     }
 
-    // --- GETTER & SETTER ---
+    // --- GETTERS & SETTERS ---
     public Long getId() { return id; }
     public void setId(Long id) { this.id = id; }
 
@@ -59,7 +60,6 @@ public class User {
     public String getPassword() { return password; }
     public void setPassword(String password) { this.password = password; }
 
-    // Getter & Setter cho Email
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 
@@ -72,7 +72,9 @@ public class User {
     public boolean isLocked() { return locked; }
     public void setLocked(boolean locked) { this.locked = locked; }
 
-    // Getter & Setter cho Reset Token
     public String getResetToken() { return resetToken; }
     public void setResetToken(String resetToken) { this.resetToken = resetToken; }
+
+    public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
+    public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
 }

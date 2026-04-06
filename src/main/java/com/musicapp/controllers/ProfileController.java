@@ -1,8 +1,8 @@
 package com.musicapp.controllers;
 
-import java.security.Principal;
-
-import org.springframework.beans.factory.annotation.Autowired;
+import com.musicapp.exception.WeakPasswordException;
+import com.musicapp.services.UserService;
+import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -10,25 +10,30 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import com.musicapp.models.User;
-import com.musicapp.repositories.UserRepository;
+import java.security.Principal;
 
+/**
+ * C1 FIX: changePassword now delegates to UserService which uses
+ * passwordEncoder.matches() for old-password verification and
+ * passwordEncoder.encode() for storing the new password.
+ * I1 FIX: Constructor injection.
+ */
 @Controller
 @RequestMapping("/profile")
 public class ProfileController {
 
-    @Autowired
-    private UserRepository userRepository;
+    private final UserService userService;
 
-    // Hiển thị trang Hồ sơ
+    public ProfileController(UserService userService) {
+        this.userService = userService;
+    }
+
     @GetMapping
     public String profilePage(Model model, Principal principal) {
-        User user = userRepository.findByUsername(principal.getName());
-        model.addAttribute("user", user);
+        model.addAttribute("user", userService.getByUsername(principal.getName()));
         return "profile";
     }
 
-    // Xử lý đổi mật khẩu
     @PostMapping("/change-password")
     public String changePassword(
             @RequestParam String oldPassword,
@@ -36,26 +41,15 @@ public class ProfileController {
             @RequestParam String confirmPassword,
             Principal principal) {
 
-        User user = userRepository.findByUsername(principal.getName());
-
-        // Kiểm tra mật khẩu cũ 
-        if (!user.getPassword().equals(oldPassword)) {
+        try {
+            userService.changePassword(principal.getName(), oldPassword, newPassword, confirmPassword);
+            return "redirect:/profile?success=true";
+        } catch (BadCredentialsException e) {
             return "redirect:/profile?error=old_wrong";
-        }
-
-        // Check xem mk mới có đúng với ráng buộc không
-        if (!newPassword.matches("^(?=.*[A-Z]).{6,}$")) {
+        } catch (WeakPasswordException e) {
             return "redirect:/profile?error=weak_pass";
-        }
-
-        // Check xem pass đã giống nhau chưa
-        if (!newPassword.equals(confirmPassword)) {
+        } catch (IllegalArgumentException e) {
             return "redirect:/profile?error=mismatch";
         }
-
-        user.setPassword(newPassword);
-        userRepository.save(user);
-
-        return "redirect:/profile?success=true";
     }
 }

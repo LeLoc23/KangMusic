@@ -1,88 +1,147 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <title>Quản Trị KangMusic</title>
-    <link rel="stylesheet" th:href="@{/css/common.css}">
-    <link rel="stylesheet" th:href="@{/css/admin.css}">
-</head>
-<body>
-    <div class="admin-container">
-        <h1 class="admin-header">🛠️ Bảng Điều Khiển Admin</h1>
-        <div style="text-align: right; margin-bottom: 20px;">
-            <a href="/" class="auth-btn register-btn">⬅ Quay lại Trang chủ</a>
-        </div>
+<head th:replace="~{fragments :: head('Quản Trị - KangMusic')}"></head>
+<body hx-boost="true">
 
-        <div class="admin-section">
-            <h3>👥 Quản lý Người Dùng</h3>
-            <table>
-                <tr>
-                    <th>ID</th><th>Username</th><th>Họ Tên</th><th>Quyền</th><th>Trạng thái</th><th>Thao tác</th>
-                </tr>
-                <tr th:each="user : ${users}">
-                    <td th:text="${user.id}">1</td>
-                    <td th:text="${user.username}">admin</td>
-                    <td th:text="${user.fullName}">Tên</td>
-                    
-                    <td>
-                        <div th:if="${user.username != currentUsername}">
-                            <form th:action="@{/admin/user/role}" method="post" class="action-form">
-                                <input type="hidden" name="id" th:value="${user.id}">
-                                <select name="newRole" onchange="this.form.submit()" style="padding: 3px; background: #282828; color: white; border: none;">
-                                    <option value="ROLE_USER" th:selected="${user.role == 'ROLE_USER'}">User</option>
-                                    <option value="ROLE_ADMIN" th:selected="${user.role == 'ROLE_ADMIN'}">Admin</option>
-                                </select>
-                            </form>
-                        </div>
-                        
-                        <div th:unless="${user.username != currentUsername}">
-                            <span style="color: #1db954; font-weight: bold;">Admin</span>
-                        </div>
-                    </td>
-                    
-                    <td th:text="${user.locked ? 'Bị khóa 🔒' : 'Hoạt động 🟢'}">Trạng thái</td>
-                    
-                    <td>
-                        <div th:if="${user.username != currentUsername}">
-                            <form th:action="@{/admin/user/lock}" method="post" class="action-form">
-                                <input type="hidden" name="id" th:value="${user.id}">
-                                <button type="submit" class="btn btn-warning" th:text="${user.locked ? 'Mở khóa' : 'Khóa'}"></button>
-                            </form>
-                            <form th:action="@{/admin/user/delete}" method="post" class="action-form" onsubmit="return confirm('Bạn có chắc chắn muốn xóa user này?');">
-                                <input type="hidden" name="id" th:value="${user.id}">
-                                <button type="submit" class="btn btn-delete">Xóa</button>
-                            </form>
-                        </div>
-                    </td>
-                </tr>
-            </table>
-        </div>
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
 
-        <div class="admin-section">
-            <h3>🎵 Quản lý Bài Hát & Video</h3>
-            <div style="margin-bottom: 10px;">
-                <a th:href="@{/add}" class="btn btn-success" style="text-decoration: none;">➕ Thêm mới</a>
+        <!-- MAIN CONTENT (HTMX target) -->
+        <main class="content-area" id="main-content">
+            <div class="admin-container">
+                <div class="admin-back-row">
+                    <a href="/" class="btn btn-back">← Quay lại Trang chủ</a>
+                </div>
+
+                <h1 class="admin-header">🛠️ Bảng Điều Khiển Admin</h1>
+
+                <!-- Users Section -->
+                <div class="admin-section table-responsive">
+                    <h3>👥 Quản lý Người Dùng</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Username</th>
+                                <th class="hide-mobile">Họ Tên</th>
+                                <th>Quyền</th>
+                                <th>Trạng thái</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="user : ${users}">
+                                <td th:text="${user.id}">1</td>
+                                <td th:text="${user.username}">admin</td>
+                                <td class="hide-mobile" th:text="${user.fullName}">Tên</td>
+
+                                <!-- Role cell -->
+                                <td>
+                                    <div th:if="${user.username != currentUsername}">
+                                        <form th:action="@{/admin/user/role}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${user.id}">
+                                            <select name="newRole" onchange="this.form.submit()">
+                                                <option value="ROLE_USER" th:selected="${user.role == 'ROLE_USER'}">User</option>
+                                                <option value="ROLE_ADMIN" th:selected="${user.role == 'ROLE_ADMIN'}">Admin</option>
+                                            </select>
+                                        </form>
+                                    </div>
+                                    <div th:unless="${user.username != currentUsername}">
+                                        <span class="admin-role-badge">Admin</span>
+                                    </div>
+                                </td>
+
+                                <!-- Status cell -->
+                                <td>
+                                    <span th:if="${user.locked}" class="status-locked">🔒 Khóa</span>
+                                    <span th:unless="${user.locked}" class="status-active">🟢 Active</span>
+                                </td>
+
+                                <!-- Actions cell -->
+                                <td>
+                                    <div th:if="${user.username != currentUsername}" class="action-btn-group">
+                                        <form th:action="@{/admin/user/lock}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${user.id}">
+                                            <button type="submit" class="btn btn-warning" th:text="${user.locked ? 'Mở' : 'Khóa'}">Khóa</button>
+                                        </form>
+                                        <form th:action="@{/admin/user/delete}" method="post" class="action-form"
+                                              onsubmit="return confirm('Bạn có chắc chắn muốn xóa user này?');">
+                                            <input type="hidden" name="id" th:value="${user.id}">
+                                            <button type="submit" class="btn btn-delete">Xóa</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Media Section -->
+                <div class="admin-section table-responsive">
+                    <h3>🎵 Quản lý Bài Hát &amp; Video</h3>
+                    <div class="add-media-row">
+                        <a th:href="@{/add}" class="btn btn-success">
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            Thêm mới
+                        </a>
+                    </div>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên Bài Hát</th>
+                                <th class="hide-mobile">Ca sĩ</th>
+                                <th class="hide-mobile">Loại</th>
+                                <th class="hide-mobile">Thời lượng</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${mediaItems}">
+                                <td th:text="${item.id}">1</td>
+                                <td>
+                                    <div style="font-weight: 600;" th:text="${item.title}">Bài hát</div>
+                                    <div class="mobile-only text-muted" th:text="${item.artist}">Ca sĩ</div>
+                                </td>
+                                <td class="hide-mobile" th:text="${item.artist}">Ca sĩ</td>
+                                
+                                <td class="hide-mobile">
+                                    <span th:if="${item.type.name() == 'VIDEO'}" class="badge-video" style="padding: 2px 6px; border-radius: 4px; font-size: 11px;">VIDEO</span>
+                                    <span th:unless="${item.type.name() == 'VIDEO'}" class="badge-audio" style="padding: 2px 6px; border-radius: 4px; font-size: 11px; color:#000;">AUDIO</span>
+                                </td>
+
+                                <!-- Duration column -->
+                                <td class="hide-mobile">
+                                    <span th:if="${item.durationSeconds != null}"
+                                          th:text="${#numbers.formatInteger(item.durationSeconds / 60, 1)} + ':' + ${#numbers.formatInteger(item.durationSeconds % 60, 2)}"
+                                          style="font-size:12px; color: var(--text-muted);">-</span>
+                                    <span th:unless="${item.durationSeconds != null}" style="color:var(--text-muted); font-size:11px;">-</span>
+                                </td>
+                                
+                                <td>
+                                    <form th:action="@{/admin/media/delete}" method="post" class="action-form"
+                                          onsubmit="return confirm('Xóa bài hát này khỏi Database?');">
+                                        <input type="hidden" name="id" th:value="${item.id}">
+                                        <button type="submit" class="btn btn-delete">Xóa</button>
+                                    </form>
+                                </td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
-            <table>
-                <tr>
-                    <th>ID</th><th>Tên Bài Hát</th><th>Ca sĩ</th><th>Cảm xúc</th><th>File</th><th>Thao tác</th>
-                </tr>
-                <tr th:each="item : ${mediaItems}">
-                    <td th:text="${item.id}">1</td>
-                    <td th:text="${item.title}">Bài hát</td>
-                    <td th:text="${item.artist}">Ca sĩ</td>
-                    <td th:text="${item.emotionLabel}">Vui vẻ</td>
-                    <td th:text="${item.fileName}">file.mp3</td>
-                    <td>
-                        <form th:action="@{/admin/media/delete}" method="post" class="action-form" onsubmit="return confirm('Xóa bài hát này khỏi Database?');">
-                            <input type="hidden" name="id" th:value="${item.id}">
-                            <button type="submit" class="btn btn-delete">Xóa</button>
-                        </form>
-                    </td>
-                </tr>
-            </table>
-        </div>
-
+            <div style="height: 100px;"></div>
+        </main>
+        
+        <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+        <div th:replace="~{fragments :: right-sidebar}"></div>
     </div>
+    
+    <!-- GLOBAL PLAYER injected at root body level so it persists -->
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
 </body>
 </html>

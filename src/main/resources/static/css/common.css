@@ -1,166 +1,191 @@
-/* Thiết lập nền Dark Mode và Font chữ cho toàn website */
+/* ===== KANGMUSIC - SPOTIFY-INSPIRED DESIGN SYSTEM ===== */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+:root {
+  /* Colors */
+  --sp-green: #1db954;
+  --sp-green-hover: #1ed760;
+  --sp-black: #121212;
+  --sp-dark: #181818;
+  --sp-card: #282828;
+  --sp-card-hover: #3e3e3e;
+  --sp-surface: #242424;
+  --sp-white: #ffffff;
+  --sp-text-muted: #b3b3b3;
+  --sp-text-dim: #727272;
+  --sp-border: rgba(255,255,255,0.1);
+  --sp-danger: #e91429;
+  
+  /* Borders & Shadows */
+  --radius: 8px;
+  --radius-full: 9999px;
+  --transition: all 0.2s ease;
+  --shadow: 0 8px 24px rgba(0,0,0,0.5);
+  --shadow-focus: 0 0 0 2px rgba(255, 255, 255, 0.1);
+
+  /* Heights */
+  --player-height: 90px;
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+html {
+  font-size: 16px;
+  height: 100%;
+  overflow: hidden; /* chặn scroll toàn trang, scroll xảy ra bên trong từng vùng */
+}
 body {
-    font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    background-color: #121212;
-    color: #ffffff;
-    margin: 0;
-    padding: 20px;
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+  background-color: var(--sp-black);
+  color: var(--sp-white);
+  height: 100%;  /* cần thiết để page-wrapper { height: 100% } tính đúng */
+  -webkit-font-smoothing: antialiased;
+  overflow: hidden;
+}
+a { color: inherit; text-decoration: none; }
+a:hover { color: var(--sp-white); }
+button { cursor: pointer; border: none; background: none; font-family: inherit; }
+::-webkit-scrollbar { width: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+/* GLOBALS & UTILS */
+.hidden { display: none !important; }
+.w-full { width: 100% !important; }
+.text-left { text-align: left !important; }
+.text-muted { color: var(--sp-text-muted) !important; }
+.flex-1 { flex: 1 !important; }
+.m-0 { margin: 0 !important; }
+.truncate-text { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.mobile-only { display: none; }
+
+/* FOCUS STATES FOR A11Y */
+button:focus-visible, a:focus-visible, input:focus-visible, select:focus-visible {
+  outline: none;
+  box-shadow: var(--shadow-focus);
 }
 
-/* Tiêu đề chính */
-h1 {
-    text-align: center;
-    color: #1db954; 
-    border-bottom: 2px solid #282828;
-    padding-bottom: 15px;
-}
-
-/* Căn giữa nội dung toàn trang */
-.container {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-/* =========================================
-   THANH ĐIỀU HƯỚNG (NAVIGATION BAR)
-   ========================================= */
+/* TOP NAV */
 .top-nav {
-    display: flex;
-    justify-content: flex-end; /* Đẩy các nút sang góc phải */
-    align-items: center;      /* Căn giữa các phần tử theo chiều dọc */
-    padding: 10px 0;
-    margin-bottom: 20px;
+  display: flex;
+  justify-content: flex-end;
+  align-items: center;
+  padding: 16px 0;
+  gap: 8px;
 }
 
 .auth-btn {
-    padding: 8px 20px;
-    margin-left: 15px;
-    border-radius: 20px; /* Bo tròn giống Spotify */
-    text-decoration: none;
-    font-weight: bold;
-    font-size: 14px;
-    transition: all 0.2s;
-    display: inline-block;
-    border: none;
-    cursor: pointer;
+  padding: 8px 24px;
+  border-radius: var(--radius-full);
+  font-weight: 700;
+  font-size: 14px;
+  letter-spacing: 0.03em;
+  transition: var(--transition);
+  display: inline-flex;
+  align-items: center;
+  cursor: pointer;
+  white-space: nowrap;
 }
+.login-btn { background: transparent; color: var(--sp-text-muted); }
+.login-btn:hover { color: var(--sp-white); transform: scale(1.04); }
+.register-btn { background: var(--sp-white); color: #000; }
+.register-btn:hover { background: #f0f0f0; transform: scale(1.04); }
 
-/* Nút Đăng nhập: Nền trong suốt, chữ xám */
-.login-btn {
-    background-color: transparent;
-    color: #b3b3b3;
-}
-.login-btn:hover {
-    color: #ffffff;
-    transform: scale(1.05);
-}
-
-/* Nút Đăng ký & Nút Quản trị (Dùng chung style nổi bật) */
-.register-btn, .admin-btn {
-    background-color: #ffffff;
-    color: #000000;
-}
-.register-btn:hover, .admin-btn:hover {
-    transform: scale(1.05);
-    background-color: #f0f0f0;
-}
-
-/* Nút Quản trị màu xanh dương nhẹ để phân biệt */
-.admin-btn {
-    background-color: #3498db;
-    color: #ffffff;
-}
-
-/* Nút Đăng xuất: Màu đỏ nhẹ nhàng */
-.logout-btn {
-    background-color: #e74c3c;
-    color: #ffffff;
-}
-.logout-btn:hover {
-    background-color: #c0392b;
-    transform: scale(1.05);
-}
-
-/* Hiển thị thông tin lời chào người dùng */
-.user-info {
-    font-size: 14px;
-    font-weight: bold;
-    color: #1db954; /* Màu xanh lá đặc trưng */
-    margin-right: 10px;
-}
-
-.user-name {
-    color: #ffffff;
-    text-decoration: underline;
-}
-
-/* Đảm bảo form đăng xuất không làm lệch dòng */
-.logout-form {
-    display: inline;
-    margin: 0;
-    padding: 0;
-}
-
-/* =========================================
-   MENU DROPDOWN (HỒ SƠ CÁ NHÂN) - PHẦN MỚI THÊM
-   ========================================= */
-.user-dropdown {
-    position: relative;
-    display: inline-block;
-}
-
-.dropbtn {
-    background-color: transparent;
-    color: #1db954;
-    font-weight: bold;
-    font-size: 15px;
-    border: none;
-    cursor: pointer;
-    padding: 10px;
+.auth-btn-group {
     display: flex;
+    flex-direction: row;
+    gap: 12px;
     align-items: center;
 }
+@media (max-width: 768px) {
+    .auth-btn-group {
+        display: flex;
+    }
+}
 
-.dropbtn:hover {
-    color: #1ed760;
+/* USER DROPDOWN */
+.user-dropdown { position: relative; display: inline-block; }
+.dropbtn {
+  display: flex; align-items: center; gap: 8px;
+  background: var(--sp-card); color: var(--sp-white);
+  font-weight: 700; font-size: 14px;
+  border-radius: var(--radius-full); padding: 4px 12px 4px 4px;
+  transition: var(--transition);
+}
+.dropbtn:hover { background: var(--sp-card-hover); }
+.dropbtn-avatar {
+  width: 28px; height: 28px; background: var(--sp-green);
+  border-radius: 50%; display: flex; align-items: center; justify-content: center;
+  font-size: 12px; font-weight: 800; color: #000; flex-shrink: 0;
 }
 
 .dropdown-content {
-    display: none;
+  display: none; position: absolute; right: 0; top: calc(100% + 8px);
+  background: var(--sp-card); min-width: 200px;
+  box-shadow: var(--shadow); z-index: 100;
+  border-radius: var(--radius); overflow: visible;
+  border: 1px solid var(--sp-border);
+}
+/* Invisible bridge to prevent losing hover state when moving mouse across the 8px gap */
+.dropdown-content::after {
+  content: ''; position: absolute;
+  bottom: 100%; left: 0; width: 100%; height: 8px;
+  background: transparent;
+}
+.dropdown-content a, .dropdown-content button.dropdown-logout {
+  color: var(--sp-white); padding: 12px 16px; display: block;
+  width: 100%; text-align: left; background: none; border: none;
+  font-size: 14px; font-family: inherit; cursor: pointer; transition: background 0.15s;
+}
+.dropdown-content a:first-child:hover {
+  border-top-left-radius: var(--radius); border-top-right-radius: var(--radius);
+}
+.dropdown-content button.dropdown-logout:hover {
+  border-bottom-left-radius: var(--radius); border-bottom-right-radius: var(--radius);
+}
+.dropdown-content a:hover, .dropdown-content button.dropdown-logout:hover {
+  background: var(--sp-card-hover);
+}
+.dropdown-divider { height: 1px; background: var(--sp-border); margin: 4px 0; }
+.dropdown-logout { color: var(--sp-text-muted) !important; }
+.dropdown-logout:hover { color: var(--sp-white) !important; }
+.user-dropdown:hover .dropdown-content { display: block; }
+
+/* NOTIFICATION PANEL */
+.noti-panel {
     position: absolute;
+    top: calc(100% + 12px);
     right: 0;
-    background-color: #282828;
-    min-width: 170px;
-    box-shadow: 0px 8px 16px 0px rgba(0,0,0,0.5);
-    z-index: 1;
-    border-radius: 5px;
-    overflow: hidden;
+    width: 420px;
+    background: #242424;
+    border-radius: 8px;
+    box-shadow: 0 16px 40px rgba(0,0,0,0.8);
+    z-index: 2000;
+    padding: 24px;
+    cursor: default;
 }
+.noti-panel.hidden { display: none; }
 
-.dropdown-content a, .dropdown-content button {
-    color: #ffffff;
-    padding: 12px 16px;
-    text-decoration: none;
-    display: block;
-    width: 100%;
-    text-align: left;
-    background: none;
-    border: none;
-    font-size: 14px;
-    cursor: pointer;
-    box-sizing: border-box;
+.noti-panel-header h3 { font-size: 24px; font-weight: 800; margin-bottom: 8px; }
+.noti-panel-header p { font-size: 14px; color: var(--sp-text-muted); margin-bottom: 20px; }
+
+.noti-panel-filters { display: flex; gap: 8px; margin-bottom: 32px; }
+.noti-filter-pill {
+    padding: 6px 16px; border-radius: 20px; font-size: 13px; font-weight: 700;
+    background: rgba(255,255,255,0.1); color: #fff; cursor: pointer; transition: 0.2s;
 }
+.noti-filter-pill.active { background: #fff; color: #000; }
+.noti-filter-pill:hover:not(.active) { background: rgba(255,255,255,0.2); }
 
-.dropdown-content a:hover, .dropdown-content button:hover {
-    background-color: #3e3e3e;
+.noti-panel-empty { text-align: center; padding: 40px 0; }
+.noti-panel-empty h4 { font-size: 18px; font-weight: 700; margin-bottom: 12px; }
+.noti-panel-empty p { font-size: 14px; color: var(--sp-text-muted); line-height: 1.5; }
+
+@media (max-width: 768px) {
+    .noti-panel { width: 90vw; position: fixed; top: 64px; left: 5vw; right: 5vw; }
 }
-
-/* Hiển thị menu khi hover chuột vào khu vực dropdown */
-.user-dropdown:hover .dropdown-content {
-    display: block;
-}
-
-.dropdown-logout {
-    color: #e74c3c !important; /* Đỏ cho nút đăng xuất */
-    font-weight: bold;
+@media (max-width: 768px) {
+    .dropdown-content {
+        bottom: calc(100% + 8px);
+        top: auto;
+    }
 }

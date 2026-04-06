@@ -1,43 +1,233 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Thêm Nhạc Mới</title>
-    
-    <link rel="stylesheet" th:href="@{/css/common.css}">
-    <link rel="stylesheet" th:href="@{/css/add.css}">
-</head>
-<body>
+<head th:replace="~{fragments :: head('Thêm Nhạc Mới - KangMusic')}"></head>
+<body hx-boost="true">
 
-    <div class="form-container">
-        <h2 style="text-align: center; color: #1db954;">➕ Thêm Bài Hát / Video</h2>
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+
+        <!-- MAIN CONTENT (HTMX target) -->
+        <main class="content-area" id="main-content">
+            <div class="form-container">
+                <a th:href="@{/}" class="form-back-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    Quay lại Trang chủ
+                </a>
+
+                <h2>➕ Thêm Bài Hát / Video</h2>
+
+                <!-- Thông báo lỗi -->
+                <div th:if="${error}" class="alert-error" th:text="${error}"></div>
+
+                <!-- Thanh tiến trình upload -->
+                <div id="upload-progress-wrapper" style="display:none; margin-bottom:16px;">
+                    <div style="font-size:13px; color:var(--text-muted); margin-bottom:6px;">
+                        Đang tải lên… <span id="upload-percent">0</span>%
+                    </div>
+                    <div style="background:var(--bg-elevated,#2a2a2a); border-radius:8px; overflow:hidden; height:8px;">
+                        <div id="upload-progress-bar"
+                             style="height:100%; width:0%; background:linear-gradient(90deg,var(--accent,#1db954),#1ed760); transition:width 0.2s ease; border-radius:8px;">
+                        </div>
+                    </div>
+                </div>
+
+                <form id="upload-form" th:action="@{/add}" method="post" enctype="multipart/form-data" hx-disable>
+
+                    <label>Tên bài hát / video <span style="color:red">*</span></label>
+                    <input type="text" name="title" required placeholder="VD: Lạc Trôi">
+
+                    <label>Ca sĩ / Nghệ sĩ <span style="color:red">*</span></label>
+                    <input type="text" name="artist" required placeholder="VD: Sơn Tùng M-TP">
+
+                    <label>Ảnh bìa (Poster) <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <div class="poster-upload-wrapper" style="margin-bottom:16px;">
+                        <input type="file" name="posterFile" id="poster-file-input" accept="image/*" style="display:none;">
+                        <div id="poster-preview-box" 
+                             onclick="document.getElementById('poster-file-input').click()"
+                             style="width:120px; height:120px; border-radius:8px; background:rgba(255,255,255,0.06); 
+                                    border:2px dashed rgba(255,255,255,0.2); display:flex; flex-direction:column; 
+                                    align-items:center; justify-content:center; cursor:pointer; overflow:hidden; transition:0.2s;">
+                            <svg width="24" height="24" viewBox="0 0 24 24" fill="var(--text-muted)"><path d="M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z"/></svg>
+                            <span style="font-size:11px; color:var(--text-muted); margin-top:4px;">Chọn ảnh</span>
+                        </div>
+                    </div>
+
+                    <label>Chọn File Nhạc / Video <span style="color:red">*</span></label>
+                    <input type="file" name="mediaFile" id="media-file-input" accept="audio/*, video/*" required>
+
+                    <label>Loại nội dung</label>
+                    <select name="type">
+                        <option value="AUDIO">🎵 Bài hát (Audio)</option>
+                        <option value="VIDEO">🎬 Video Clip</option>
+                    </select>
+
+                    <label>Thời lượng</label>
+                    <!-- Ẩn input số — giá trị sẽ được điền tự động khi chọn file -->
+                    <input type="hidden" name="durationSeconds" id="duration-input">
+                    <!-- Hiển thị thân thiện -->
+                    <div id="duration-display"
+                         style="padding:10px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12);
+                                border-radius:8px; font-size:14px; color:#b3b3b3; min-height:42px;">
+                        Chọn file nhạc để tự đọc thời lượng...
+                    </div>
+
+                    <label>Thể loại nhạc <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <select name="genre">
+                        <option value="">-- Chưa phân loại --</option>
+                        <option value="VIET_POP">🎤 Nhạc Việt Pop</option>
+                        <option value="RELAX">🌿 Thư giãn</option>
+                        <option value="PARTY">🎉 Tiệc tùng</option>
+                        <option value="CHILL">🌙 Chill</option>
+                        <option value="SAD">😢 Buồn</option>
+                        <option value="ENERGETIC">⚡ Năng lượng</option>
+                        <option value="INDIE">🎸 Indie</option>
+                        <option value="LOFI">☕ Lo-fi</option>
+                    </select>
+
+                    <label>Nhãn Cảm Xúc <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <input type="text" name="emotionLabel" placeholder="VD: Buồn, Sôi động, Chill...">
+
+                    <label>Lời bài hát <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <textarea name="lyrics" rows="6" placeholder="Nhập lời bài hát tại đây..." 
+                              style="width:100%; padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); 
+                                     border-radius:8px; color:#fff; font-family:inherit; resize:vertical;"></textarea>
+
+                    <button type="submit" id="upload-submit-btn">TẢI LÊN &amp; LƯU</button>
+                </form>
+            </div>
+            <!-- Mobile padding -->
+            <div style="height: 100px;"></div>
+        </main>
         
-        <form th:action="@{/add}" method="post" enctype="multipart/form-data">
-            
-            <label>Tên bài hát/video:</label>
-            <input type="text" name="title" required placeholder="VD: Lạc Trôi">
-
-            <label>Ca sĩ/Nghệ sĩ:</label>
-            <input type="text" name="artist" required placeholder="VD: Sơn Tùng M-TP">
-
-            <label>Chọn File Nhạc / Video từ máy tính:</label>
-            <input type="file" name="mediaFile" accept="audio/*, video/*" required>
-
-            <label>Loại (AUDIO hoặc VIDEO):</label>
-            <select name="type">
-                <option value="AUDIO">Bài hát (Audio)</option>
-                <option value="VIDEO">Video Clip</option>
-            </select>
-
-            <label>Nhãn Cảm Xúc:</label>
-            <input type="text" name="emotionLabel" placeholder="VD: Buồn, Sôi động, Chill...">
-
-            <button type="submit">TẢI LÊN & LƯU</button>
-        </form>
-        
-        <a href="/">⬅ Quay lại trang chủ</a>
+        <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+        <div th:replace="~{fragments :: right-sidebar}"></div>
     </div>
+
+    <!-- GLOBAL PLAYER persists -->
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
+<script>
+(function () {
+    const fileInput  = document.getElementById('media-file-input');
+    const durationIn = document.getElementById('duration-input');
+    const durationDp = document.getElementById('duration-display');
+    const typeSelect = document.querySelector('select[name="type"]');
+
+    // ── Tự đọc thời lượng khi chọn file ───────────────────────────────────
+    fileInput.addEventListener('change', function () {
+        const file = this.files[0];
+        if (!file) return;
+
+        // Tự nhận loại : video/* → chọn VIDEO
+        if (file.type.startsWith('video/')) {
+            typeSelect.value = 'VIDEO';
+        } else {
+            typeSelect.value = 'AUDIO';
+        }
+
+        durationDp.textContent = '⏳ Đang đọc thời lượng...';
+        durationIn.value = '';
+
+        const objUrl = URL.createObjectURL(file);
+        const media  = file.type.startsWith('video/')
+            ? document.createElement('video')
+            : document.createElement('audio');
+
+        media.preload = 'metadata';
+        media.src     = objUrl;
+
+        media.addEventListener('loadedmetadata', function () {
+            URL.revokeObjectURL(objUrl);
+            const totalSec = Math.round(media.duration);
+            if (!isFinite(totalSec) || totalSec <= 0) {
+                durationDp.textContent = '⚠️ Không đọc được thời lượng (file có thể bị lỗi)';
+                return;
+            }
+            durationIn.value = totalSec;
+            const m = Math.floor(totalSec / 60);
+            const s = totalSec % 60;
+            durationDp.innerHTML =
+                '<span style="color:#1db954; font-weight:600;">✅ ' + m + ' phút ' + s + ' giây</span>' +
+                ' <span style="font-size:11px;color:#b3b3b3;">(' + totalSec + ' giây)</span>';
+        });
+
+        media.addEventListener('error', function () {
+            URL.revokeObjectURL(objUrl);
+            durationDp.textContent = '⚠️ Không đọc được thời lượng – sẽ để trống';
+        });
+    });
+    
+    // ── Preview ảnh Poster ────────────────────────────────────────────────
+    const posterInput = document.getElementById('poster-file-input');
+    const posterBox   = document.getElementById('poster-preview-box');
+    
+    posterInput.addEventListener('change', function() {
+        const file = this.files[0];
+        if (!file) return;
+        
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            posterBox.innerHTML = `<img src="${e.target.result}" style="width:100%; height:100%; object-fit:cover;">`;
+            posterBox.style.border = 'none';
+        }
+        reader.readAsDataURL(file);
+    });
+
+    // ── Upload với progress bar ────────────────────────────────────────────
+    const form           = document.getElementById('upload-form');
+    const progressWrapper = document.getElementById('upload-progress-wrapper');
+    const progressBar    = document.getElementById('upload-progress-bar');
+    const percentLabel   = document.getElementById('upload-percent');
+    const submitBtn      = document.getElementById('upload-submit-btn');
+
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+
+        const fileInput = document.getElementById('media-file-input');
+        if (!fileInput.files || !fileInput.files.length) return;
+
+        const formData = new FormData(form);
+        const xhr = new XMLHttpRequest();
+
+        // Hiện thanh tiến trình
+        progressWrapper.style.display = 'block';
+        submitBtn.disabled = true;
+        submitBtn.textContent = 'Đang tải…';
+
+        xhr.upload.addEventListener('progress', function (e) {
+            if (e.lengthComputable) {
+                const pct = Math.round((e.loaded / e.total) * 100);
+                progressBar.style.width = pct + '%';
+                percentLabel.textContent = pct;
+            }
+        });
+
+        xhr.addEventListener('load', function () {
+            if (xhr.status >= 200 && xhr.status < 400) {
+                window.location.href = xhr.responseURL || '/';
+            } else {
+                alert('Tải lên thất bại (HTTP ' + xhr.status + ')');
+                submitBtn.disabled = false;
+                submitBtn.textContent = 'TẢI LÊN & LƯU';
+                progressWrapper.style.display = 'none';
+            }
+        });
+
+        xhr.addEventListener('error', function () {
+            alert('Lỗi mạng khi tải lên.');
+            submitBtn.disabled = false;
+            submitBtn.textContent = 'TẢI LÊN & LƯU';
+            progressWrapper.style.display = 'none';
+        });
+
+        xhr.open('POST', form.action);
+        xhr.send(formData);
+    });
+})();
+</script>
 
 </body>
 </html>

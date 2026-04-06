@@ -1,19 +1,23 @@
 package com.musicapp.repositories;
 
+import com.musicapp.models.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-import com.musicapp.models.User;
+import java.util.Optional;
 
+/**
+ * I3 FIX: All lookup methods now return Optional<User> to force explicit
+ * null-handling at the call site and prevent silent NPEs.
+ */
 @Repository
 public interface UserRepository extends JpaRepository<User, Long> {
-    
-    // Hàm cực kỳ quan trọng: Tìm người dùng trong DB dựa vào tên đăng nhập
-    User findByUsername(String username);
 
-    // THÊM MỚI: Tìm người dùng dựa vào Email (Dùng để kiểm tra trùng lặp hoặc tìm lại mật khẩu)
-    User findByEmail(String email);
+    Optional<User> findByUsername(String username);
 
-    // THÊM MỚI: Tìm người dùng dựa vào Mã khôi phục (Dùng ở Giai đoạn gửi mail reset mật khẩu)
-    User findByResetToken(String resetToken);
+    Optional<User> findByEmail(String email);
+
+    Optional<User> findByResetToken(String resetToken);
+
+    boolean existsByUsername(String username);
 }
