@@ -3,6 +3,7 @@ package com.musicapp.controllers;
 import com.musicapp.dto.MediaItemDto;
 import com.musicapp.services.LibraryService;
 import com.musicapp.services.MediaService;
+import com.musicapp.services.PlaylistService;
 import com.musicapp.services.RecommendationService;
 import com.musicapp.services.UserService;
 import org.slf4j.Logger;
@@ -32,15 +33,18 @@ public class MusicController {
     private final MediaService            mediaService;
     private final RecommendationService   recommendationService;
     private final LibraryService          libraryService;
+    private final PlaylistService         playlistService;
     private final UserService             userService;
 
     public MusicController(MediaService mediaService,
                            RecommendationService recommendationService,
                            LibraryService libraryService,
+                           PlaylistService playlistService,
                            UserService userService) {
         this.mediaService          = mediaService;
         this.recommendationService = recommendationService;
         this.libraryService        = libraryService;
+        this.playlistService       = playlistService;
         this.userService           = userService;
     }
 
@@ -88,6 +92,7 @@ public class MusicController {
         // Liked IDs — để highlight nút ♥ trên card
         if (userId != null) {
             model.addAttribute("likedIds", libraryService.getLikedIds(userId));
+            model.addAttribute("searchPlaylists", playlistService.getAllUserPlaylists(userId));
         }
 
         return (request.getHeader("HX-Request") != null) ? "index :: main-content" : "index";

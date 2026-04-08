@@ -13,6 +13,294 @@ function getCsrfToken() {
     return match ? decodeURIComponent(match.split('=')[1]) : '';
 }
 
+const LEGACY_PATH_ICON_MAP = Object.freeze({
+    'M8 5v14l11-7z': ['play_arrow', false],
+    'M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z': ['play_circle', false],
+    'M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z': ['playlist_add', false],
+    'M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z': ['music_note', false],
+    'M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z': ['folder', false],
+    'M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h12v2H3v-2z': ['queue_music', false],
+    'M19 13h-6v6h-2v-6H5v-2h6V5h2v6h6v2z': ['add', false],
+    'M10.59 9.17L5.41 4 4 5.41l5.17 5.17 1.42-1.41zM14.5 4l2.04 2.04L4 18.59 5.41 20 17.96 7.46 20 9.5V4h-5.5zm.33 9.41l-1.41 1.41 3.13 3.13L14.5 20H20v-5.5l-2.04 2.04-3.13-3.13z': ['shuffle', false],
+    'M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z': ['favorite', false],
+    'M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z': ['chevron_right', false],
+    'M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z': ['favorite', true],
+    'M12 12c2.21 0 4-1.79 4-4s-1.79-4-4-4-4 1.79-4 4 1.79 4 4 4zm0 2c-2.67 0-8 1.34-8 4v2h16v-2c0-2.66-5.33-4-8-4z': ['account_circle', false],
+    'M3 4h18v2H3V4zm0 7h12v2H3v-2zm0 7h8v2H3v-2z': ['menu', false],
+    'M16.436 15.022L21 19.586 19.586 21l-4.564-4.564A7.962 7.962 0 0 1 10 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8a7.962 7.962 0 0 1-1.564 5.022zM10 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12z': ['search', false],
+    'M11.99 2C6.47 2 2 6.48 2 12s4.47 10 9.99 10C17.52 22 22 17.52 22 12S17.52 2 11.99 2zM12 20c-4.42 0-8-3.58-8-8s3.58-8 8-8 8 3.58 8 8-3.58 8-8 8zm.5-13H11v6l5.25 3.15.75-1.23-4.5-2.67V7z': ['schedule', false],
+    'M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z': ['delete', false],
+    'M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z': ['chevron_left', false],
+    'M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z': ['lyrics', true],
+    'M6 19h4V5H6v14zm8-14v14h4V5h-4z': ['pause', false],
+    'M7 7h10v3l4-4-4-4v3H5v6h2V7zm10 10H7v-3l-4 4 4 4v-3h12v-6h-2v4z': ['repeat', false],
+    'M21.5 5.5v13h-4v-13h4zM16.5 7.5v9h-4v-9h4zM11.5 9.5v5h-4v-5h4zM6.5 11.5v1h-4v-1h4z': ['equalizer', false],
+    'M12 8c1.1 0 2-.9 2-2s-.9-2-2-2-2 .9-2 2 .9 2 2 2zm0 2c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2zm0 6c-1.1 0-2 .9-2 2s.9 2 2 2 2-.9 2-2-.9-2-2-2z': ['more_horiz', false],
+    'M7 14H5v5h5v-2H7v-3zm-2-4h2V7h3V5H5v5zm12 7h-3v2h5v-5h-2v3zM14 5v2h3v3h2V5h-5z': ['open_in_full', false],
+    'M18 16.08c-.76 0-1.44.3-1.96.77L8.91 12.7c.05-.23.09-.46.09-.7s-.04-.47-.09-.7l7.05-4.11c.54.5 1.25.81 2.04.81 1.66 0 3-1.34 3-3s-1.34-3-3-3-3 1.34-3 3c0 .24.04.47.09.7L8.04 9.81C7.5 9.31 6.79 9 6 9c-1.66 0-3 1.34-3 3s1.34 3 3 3c.79 0 1.5-.31 2.04-.81l7.12 4.16c-.05.21-.08.43-.08.65 0 1.61 1.31 2.92 2.92 2.92 1.61 0 2.92-1.31 2.92-2.92s-1.31-2.92-2.92-2.92z': ['share', false],
+    'M3 7h14v2H3V7zm0 4h10v2H3v-2zm12 4v-4l5 3-5 3zm-12 0h8v2H3v-2z': ['playlist_play', false],
+    'M3 9v6h4l5 5V4L7 9H3zm13.5 3c0-1.77-1.02-3.29-2.5-4.03v8.05c1.48-.73 2.5-2.25 2.5-4.02zM14 3.23v2.06c2.89.86 5 3.54 5 6.71s-2.11 5.85-5 6.71v2.06c4.01-.91 7-4.49 7-8.77s-2.99-7.86-7-8.77z': ['volume_up', false],
+    'M3 7h14v2H3V7zm0 4h14v2H3v-2zm0 4h10v2H3v-2zm16-6v8l4-4-4-4z': ['playlist_add', false],
+    'M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z': ['add', false],
+    'M15 15h4v-2h-6v6h2v-4zM9 9H5v2h6V5H9v4zM5 15h2v4h4v2H5v-6zM15 5v2h4v4h2V5h-6z': ['open_in_full', false],
+    'M3 3h8v8H3V3zm0 10h8v8H3v-8zm10-10h8v8h-8V3zm0 10h8v8h-8v-8z': ['grid_view', false],
+    'M14.5 2.134a1 1 0 0 1 1.5.866v18a1 1 0 0 1-1.5.866l-6-3.464A1 1 0 0 1 8 17.536V6.464a1 1 0 0 1 .5-.866l6-3.464zM3 3h2v18H3V3zm18 0h-2v18h2V3z': ['library_music', false],
+    'M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z': ['home', false],
+    'M18 6L6 18M6 6l12 12': ['close', false],
+    'M12 22a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2zm6-6v2H6v-2l2-2V9a4 4 0 0 1 4-4 4 4 0 0 1 4 4v5l2 2z': ['notifications', false],
+    'M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h18v2H3v-2z': ['reorder', false],
+    'M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z': ['search', false],
+    'M6 6h2v12H6zm3.5 6l8.5 6V6z': ['skip_previous', false],
+    'M6 18l8.5-6L6 6v12zM16 6v12h2V6h-2z': ['skip_next', false],
+    'M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z': ['arrow_back', false],
+    'M3 9h18v2H3V9zm0 5h18v2H3v-2z': ['view_agenda', false],
+    'M3 3h4v4H3V3zm6 0h4v4H9V3zm6 0h4v4h-4V3zM3 9h4v4H3V9zm6 0h4v4H9V9zm6 0h4v4h-4V9zM3 15h4v4H3v-4zm6 0h4v4H9v-4zm6 0h4v4h-4v-4z': ['apps', false],
+    'M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z': ['edit', false]
+});
+
+const LEGACY_CONTEXT_ICON_MAP = Object.freeze({
+    'btn-player-mini': ['picture_in_picture_alt', false],
+    'btn-player-expand': ['open_in_full', false]
+});
+
+const LEGACY_TEXT_ICON_MAP = Object.freeze({
+    '🎵': ['music_note', false],
+    '🎬': ['movie', false],
+    '❤️': ['favorite', false],
+    '♡': ['favorite', true],
+    '🔍': ['search', false],
+    '📁': ['folder', false],
+    '📌': ['keep', false],
+    '▶': ['play_arrow', false],
+    '✕': ['close', false],
+    '×': ['close', false],
+    '⤢': ['open_in_full', false],
+    '⌘': ['history', false],
+    '←': ['arrow_back', false],
+    '🎶': ['lyrics', false],
+    '🔥': ['local_fire_department', false],
+    '✨': ['auto_awesome', false],
+    '🌟': ['stars', false],
+    '🧘‍♂️': ['self_improvement', false],
+    '🥳': ['celebration', false],
+    '🏜️': ['landscape', false],
+    '💔': ['heart_broken', false],
+    '🇻🇳': ['flag', false],
+    '🎧': ['headphones', false],
+    '🎤': ['mic', false],
+    '🌿': ['spa', false],
+    '🎉': ['celebration', false],
+    '🌙': ['dark_mode', false],
+    '😢': ['sentiment_dissatisfied', false],
+    '⚡': ['bolt', false],
+    '🎸': ['music_note', false],
+    '☕': ['coffee', false],
+    '🛠️': ['build', false],
+    '👥': ['groups', false],
+    '🔒': ['lock', false],
+    '🟢': ['radio_button_checked', false],
+    '⬆️': ['upload', false],
+    '➕': ['add', false],
+    '👑': ['verified', false]
+});
+
+const LEGACY_OPTION_LABEL_MAP = Object.freeze({
+    '🎵': 'Nhạc',
+    '🔥': 'Nổi bật',
+    '🌙': 'Đêm',
+    '❤️': 'Yêu thích',
+    '⚡': 'Năng lượng',
+    '🎉': 'Tiệc',
+    '🌿': 'Thư giãn',
+    '🎸': 'Indie',
+    '☕': 'Lo-fi',
+    '😢': 'Tâm trạng',
+    '🎤': 'Ca sĩ',
+    '🎧': 'Nghe'
+});
+
+function escapeHtml(input) {
+    return String(input)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;');
+}
+
+function symbolHTML(glyph, className = '', outline = false) {
+    const outlineClass = outline ? ' km-symbol--outline' : '';
+    const extraClass = className ? ` ${className}` : '';
+    return `<span class="km-symbol${outlineClass}${extraClass}" aria-hidden="true">${glyph}</span>`;
+}
+
+function setSymbol(el, glyph, options = {}) {
+    if (!el) return;
+    const outline = !!options.outline;
+    const className = options.className || '';
+    el.classList.add('km-symbol');
+    el.classList.toggle('km-symbol--outline', outline);
+    if (className) {
+        className.split(/\s+/).filter(Boolean).forEach(cls => el.classList.add(cls));
+    }
+    el.textContent = glyph;
+}
+
+function normalizeLegacyIconSpec(spec) {
+    if (!spec) return null;
+    if (Array.isArray(spec)) return { glyph: spec[0], outline: !!spec[1] };
+    return { glyph: spec, outline: false };
+}
+
+function upgradeLegacySvgIcons(root) {
+    if (!root?.querySelectorAll) return;
+
+    root.querySelectorAll('svg').forEach(svg => {
+        if (svg.dataset.kmUpgraded === '1') return;
+
+        const pathD = svg.querySelector('path')?.getAttribute('d')?.trim();
+        let spec = normalizeLegacyIconSpec(pathD ? LEGACY_PATH_ICON_MAP[pathD] : null);
+        if (!spec) {
+            const hostWithId = svg.closest('[id]');
+            spec = normalizeLegacyIconSpec(hostWithId ? LEGACY_CONTEXT_ICON_MAP[hostWithId.id] : null);
+        }
+        if (!spec) return;
+
+        const span = document.createElement('span');
+        span.className = `km-symbol${spec.outline ? ' km-symbol--outline' : ''}`;
+        Array.from(svg.classList).forEach(cls => span.classList.add(cls));
+        span.dataset.kmUpgraded = '1';
+        span.textContent = spec.glyph;
+
+        const width = parseInt(svg.getAttribute('width') || '', 10);
+        const height = parseInt(svg.getAttribute('height') || '', 10);
+        const size = Number.isFinite(height) ? height : (Number.isFinite(width) ? width : null);
+
+        const style = svg.getAttribute('style');
+        if (style) span.setAttribute('style', style);
+        if (size && !span.style.fontSize) span.style.fontSize = `${size}px`;
+        if (svg.getAttribute('title')) span.setAttribute('title', svg.getAttribute('title'));
+        if (svg.getAttribute('aria-label')) span.setAttribute('aria-label', svg.getAttribute('aria-label'));
+        if (svg.id) span.id = svg.id;
+
+        svg.replaceWith(span);
+    });
+}
+
+function upgradeLegacyTextIcons(root) {
+    if (!root?.querySelectorAll) return;
+
+    const iconOnlySelectors = [
+        '.artwork-icon',
+        '#player-artwork-icon',
+        '#expanded-cover-icon',
+        '#mini-cover-icon',
+        '#rs-cover-icon',
+        '.media-card-artwork-icon',
+        '.search-top-thumb',
+        '.search-playlist-emoji',
+        '.genre-card-art',
+        '.track-hero-emoji',
+        '.track-art-mini > span',
+        '.library-item-thumb > span',
+        '.empty-state-icon',
+        '.search-row-icon',
+        '.player-mini-icon-btn',
+        '.player-mini-play-btn',
+        '.playlist-modal-close',
+        '.track-play-btn',
+        '.track-remove-btn',
+        '.lyrics-overlay-close',
+        '.queue-item-remove',
+        '.search-playlist-play',
+        '.pin-icon',
+        '.rs-action-btn'
+    ];
+
+    root.querySelectorAll(iconOnlySelectors.join(',')).forEach(el => {
+        if (el.querySelector('img') || el.querySelector('.km-symbol')) return;
+        const raw = (el.textContent || '').trim();
+        const spec = normalizeLegacyIconSpec(LEGACY_TEXT_ICON_MAP[raw]);
+        if (!spec) return;
+        setSymbol(el, spec.glyph, { outline: spec.outline });
+    });
+
+    const prefixedSelectors = [
+        '.section-title',
+        '.admin-header',
+        '.admin-section h3',
+        '.status-locked',
+        '.status-active',
+        '.auth-container h2',
+        '.form-container h2',
+        '.page-greeting',
+        '.genre-chip',
+        '.btn-back',
+        '.dropdown-content a',
+        '.profile-info-value',
+        '.queue-empty',
+        '.auth-links p a'
+    ];
+
+    root.querySelectorAll(prefixedSelectors.join(',')).forEach(el => {
+        if (el.querySelector('.km-symbol') || el.children.length > 0) return;
+        const text = (el.textContent || '').trim();
+        if (!text) return;
+
+        for (const [emoji, rawSpec] of Object.entries(LEGACY_TEXT_ICON_MAP)) {
+            if (!text.startsWith(`${emoji} `)) continue;
+            const spec = normalizeLegacyIconSpec(rawSpec);
+            if (!spec) continue;
+            const remainder = text.slice(emoji.length).trimStart();
+            el.innerHTML = `${symbolHTML(spec.glyph, 'km-symbol--small', spec.outline)} ${escapeHtml(remainder)}`;
+            break;
+        }
+
+        if (el.querySelector('.km-symbol')) return;
+        for (const [emoji, rawSpec] of Object.entries(LEGACY_TEXT_ICON_MAP)) {
+            if (!text.endsWith(` ${emoji}`)) continue;
+            const spec = normalizeLegacyIconSpec(rawSpec);
+            if (!spec) continue;
+            const remainder = text.slice(0, text.length - emoji.length).trimEnd();
+            el.innerHTML = `${escapeHtml(remainder)} ${symbolHTML(spec.glyph, 'km-symbol--small', spec.outline)}`;
+            break;
+        }
+    });
+
+    root.querySelectorAll('.empty-state-desc').forEach(el => {
+        if (el.querySelector('.km-symbol') || el.children.length > 0) return;
+        const original = el.textContent || '';
+        let html = escapeHtml(original);
+        for (const [emoji, rawSpec] of Object.entries(LEGACY_TEXT_ICON_MAP)) {
+            if (!original.includes(emoji)) continue;
+            const spec = normalizeLegacyIconSpec(rawSpec);
+            if (!spec) continue;
+            const escapedEmoji = emoji.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+            html = html.replace(new RegExp(escapedEmoji, 'g'), symbolHTML(spec.glyph, 'km-symbol--small', spec.outline));
+        }
+        if (html !== escapeHtml(original)) {
+            el.innerHTML = html;
+        }
+    });
+
+    root.querySelectorAll('option').forEach(opt => {
+        const original = (opt.textContent || '').trim();
+        if (!original) return;
+        if (LEGACY_OPTION_LABEL_MAP[original]) {
+            opt.textContent = LEGACY_OPTION_LABEL_MAP[original];
+            return;
+        }
+        for (const emoji of Object.keys(LEGACY_TEXT_ICON_MAP)) {
+            if (!original.startsWith(`${emoji} `)) continue;
+            opt.textContent = original.slice(emoji.length).trimStart();
+            break;
+        }
+    });
+}
+
+function upgradeLegacyIcons(root = document) {
+    upgradeLegacySvgIcons(root);
+    upgradeLegacyTextIcons(root);
+}
+
 
 
 
@@ -54,9 +342,11 @@ document.addEventListener('DOMContentLoaded', () => {
         window.htmx.ajax('GET', `${urlObj.pathname}${urlObj.search}`, {
             target: '#main-content',
             select: '#main-content',
-            swap: 'outerHTML',
-            pushUrl: true
+            swap: 'outerHTML'
         });
+        
+        // Manually push URL since htmx.ajax context pushUrl might be unreliable across versions
+        window.history.pushState(null, '', `${urlObj.pathname}${urlObj.search}`);
         return true;
     }
 
@@ -90,7 +380,9 @@ document.addEventListener('DOMContentLoaded', () => {
             initContentAreaScroll();
             updateActiveNav();
         }
+        upgradeLegacyIcons(target || document);
     });
+    upgradeLegacyIcons(document);
     updateActiveNav();
     initGlobalSearchDropdown();
 
@@ -128,7 +420,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (!list.length) return '';
             const items = list.map(item => `
                 <button class=\"search-row\" data-q=\"${item.q}\">
-                    <span class=\"search-row-icon\">⌘</span>
+                    <span class=\"search-row-icon\">${symbolHTML('history')}</span>
                     <div class=\"search-row-text\">
                         <div class=\"search-row-title\">${item.q}</div>
                         <div class=\"search-row-sub\">Tìm kiếm gần đây</div>
@@ -151,7 +443,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     <span class=\"search-row-icon\">
                         ${item.posterSrc ? `<img src=\"${item.posterSrc}\" class=\"search-row-thumb\">`
                           : item.posterFilename ? `<img src=\"/stream/${item.posterFilename}\" class=\"search-row-thumb\">`
-                          : '🔍'}
+                          : symbolHTML('search')}
                     </span>
                     <div class=\"search-row-text\">
                         <div class=\"search-row-title\">${item.title}</div>
@@ -307,18 +599,21 @@ document.addEventListener('DOMContentLoaded', () => {
     const miniSeekBar     = document.getElementById('mini-seek-bar');
     const miniCurrentTime = document.getElementById('mini-current-time');
     const miniTotalTime   = document.getElementById('mini-total-time');
+    if (!audio) return; // trang không có player — dừng sớm, không inject gì vào auth pages
+
     let lyricsOverlay     = document.getElementById('lyrics-overlay');
     let lyricsOverlayTitle = document.getElementById('lyrics-overlay-track-name');
     let lyricsOverlayContent = document.getElementById('lyrics-overlay-content');
     let btnCloseLyricsOverlay = document.getElementById('btn-close-lyrics-overlay');
 
     // Fallback: if overlay markup is not rendered from fragments, create it dynamically.
+    // Only runs on pages that have the audio player (not auth pages).
     if (!lyricsOverlay) {
         const overlay = document.createElement('div');
         overlay.className = 'lyrics-overlay';
         overlay.id = 'lyrics-overlay';
         overlay.innerHTML = `
-            <button class="lyrics-overlay-close" id="btn-close-lyrics-overlay" title="Dong loi bai hat">✕</button>
+            <button class="lyrics-overlay-close" id="btn-close-lyrics-overlay" title="Dong loi bai hat">${symbolHTML('close')}</button>
             <div class="lyrics-overlay-inner">
                 <div class="lyrics-overlay-title" id="lyrics-overlay-track-name">Loi bai hat</div>
                 <div id="lyrics-overlay-content" class="lyrics-overlay-text"></div>
@@ -330,8 +625,6 @@ document.addEventListener('DOMContentLoaded', () => {
         lyricsOverlayContent = overlay.querySelector('#lyrics-overlay-content');
         btnCloseLyricsOverlay = overlay.querySelector('#btn-close-lyrics-overlay');
     }
-
-    if (!audio) return; // trang không có player
 
     // ── State ──────────────────────────────────────────────────────────────
     let queue       = loadQueue();
@@ -345,12 +638,16 @@ document.addEventListener('DOMContentLoaded', () => {
     let miniPopup = null;
     let miniPopupDom = null;
 
-    const PLAY_SVG  = `<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>`;
-    const PAUSE_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
-    const MINI_PLAY_ICON = '>';
-    const MINI_PAUSE_ICON = '||';
-    const VIDEO_ICON = '\uD83C\uDFAC';
-    const AUDIO_ICON = '\uD83C\uDFB5';
+    const PLAY_SVG  = symbolHTML('play_arrow', 'icon-play');
+    const PAUSE_SVG = symbolHTML('pause');
+    const MINI_PLAY_ICON = symbolHTML('play_arrow');
+    const MINI_PAUSE_ICON = symbolHTML('pause');
+    const VIDEO_ICON = 'movie';
+    const AUDIO_ICON = 'music_note';
+
+    function setTrackTypeIcon(el, type) {
+        setSymbol(el, type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON);
+    }
 
     function hasPlayableTrack() {
         return !!(currentTrack && currentTrack.src);
@@ -375,7 +672,7 @@ document.addEventListener('DOMContentLoaded', () => {
             const emoji = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
             return `
                 <button type="button" class="player-expanded-queue-item" data-idx="${idx}">
-                    <span>${emoji}</span>
+                    <span>${symbolHTML(emoji)}</span>
                     <span>
                         <div class="player-expanded-queue-item-title">${escHtml(track.title || 'Unknown title')}</div>
                         <div class="player-expanded-queue-item-artist">${escHtml(track.artist || 'Unknown artist')}</div>
@@ -477,7 +774,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     expandedCoverImg.style.display = 'none';
                     expandedCoverIcon.style.display = 'flex';
-                    expandedCoverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                    setTrackTypeIcon(expandedCoverIcon, track.type);
                 }
             }
         }
@@ -527,8 +824,31 @@ document.addEventListener('DOMContentLoaded', () => {
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width,initial-scale=1">
     <title>KangMusic Mini Player</title>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0">
     <style>
         :root { color-scheme: dark; }
+        .km-symbol {
+            font-family: 'Material Symbols Rounded';
+            font-weight: 500;
+            font-style: normal;
+            font-size: 1em;
+            line-height: 1;
+            letter-spacing: normal;
+            text-transform: none;
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            white-space: nowrap;
+            word-wrap: normal;
+            direction: ltr;
+            -webkit-font-smoothing: antialiased;
+            font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+            width: 1em;
+            height: 1em;
+        }
+        .km-symbol--outline {
+            font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+        }
         * { box-sizing: border-box; }
         body {
             margin: 0;
@@ -661,14 +981,14 @@ document.addEventListener('DOMContentLoaded', () => {
     <div class="mini-head">
         <span class="mini-label">Mini player</span>
         <div class="mini-actions">
-            <button type="button" class="mini-icon-btn" id="mini-popup-expand" title="Expand">&#x2932;</button>
-            <button type="button" class="mini-icon-btn" id="mini-popup-close" title="Close">&#x2715;</button>
+            <button type="button" class="mini-icon-btn" id="mini-popup-expand" title="Expand">${symbolHTML('open_in_full', '', true)}</button>
+            <button type="button" class="mini-icon-btn" id="mini-popup-close" title="Close">${symbolHTML('close')}</button>
         </div>
     </div>
     <div class="mini-cover-wrap">
         <video id="mini-popup-video" class="mini-video" playsinline muted preload="metadata" style="display:none;"></video>
         <img id="mini-popup-cover-img" alt="Cover" style="display:none;">
-        <div id="mini-popup-cover-icon" class="mini-cover-icon">${AUDIO_ICON}</div>
+        <div id="mini-popup-cover-icon" class="mini-cover-icon">${symbolHTML(AUDIO_ICON)}</div>
         <button type="button" class="mini-play-btn" id="mini-popup-play">${MINI_PLAY_ICON}</button>
     </div>
     <div class="mini-meta">
@@ -840,7 +1160,7 @@ document.addEventListener('DOMContentLoaded', () => {
             if (dom.coverImg) dom.coverImg.style.display = 'none';
             if (dom.coverIcon) {
                 dom.coverIcon.style.display = 'flex';
-                dom.coverIcon.textContent = AUDIO_ICON;
+                setTrackTypeIcon(dom.coverIcon, 'AUDIO');
             }
         } else {
             dom.title && (dom.title.textContent = track.title || 'Unknown title');
@@ -865,7 +1185,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     dom.coverImg.style.display = 'none';
                     dom.coverIcon.style.display = 'flex';
-                    dom.coverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                    setTrackTypeIcon(dom.coverIcon, track.type);
                 }
             }
         }
@@ -881,10 +1201,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function syncMiniPlayButton() {
         if (btnMiniPlay) {
-            btnMiniPlay.textContent = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
+            btnMiniPlay.innerHTML = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
         }
         if (miniPopupDom?.btnPlay) {
-            miniPopupDom.btnPlay.textContent = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
+            miniPopupDom.btnPlay.innerHTML = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
         }
     }
 
@@ -900,7 +1220,10 @@ document.addEventListener('DOMContentLoaded', () => {
             miniTrackArtist && (miniTrackArtist.textContent = '-');
             clearMiniInlineVideo();
             if (miniCoverImg) miniCoverImg.style.display = 'none';
-            if (miniCoverIcon) miniCoverIcon.style.display = 'flex';
+            if (miniCoverIcon) {
+                miniCoverIcon.style.display = 'flex';
+                setTrackTypeIcon(miniCoverIcon, 'AUDIO');
+            }
         } else {
             miniTrackTitle && (miniTrackTitle.textContent = track.title || 'Unknown title');
             miniTrackArtist && (miniTrackArtist.textContent = track.artist || 'Unknown artist');
@@ -924,7 +1247,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 } else {
                     miniCoverImg.style.display = 'none';
                     miniCoverIcon.style.display = 'flex';
-                    miniCoverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                    setTrackTypeIcon(miniCoverIcon, track.type);
                 }
             }
         }
@@ -1046,7 +1369,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             posterImg.style.display = 'none';
             artworkIcon.style.display = 'flex';
-            artworkIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+            setTrackTypeIcon(artworkIcon, track.type);
         }
 
         const infoLink = document.getElementById('player-info-link');
@@ -1111,7 +1434,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rsGlow.style.opacity = '0.4';
             if (rsPoster) rsPoster.style.display = 'none';
             rsIcon.style.display = 'flex';
-            rsIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+            setTrackTypeIcon(rsIcon, track.type);
         }
 
         // Update "đang phát từ" label
@@ -1342,7 +1665,7 @@ document.addEventListener('DOMContentLoaded', () => {
         btnRepeat.title = labels[repeatMode] || 'Lap lai';
         btnRepeat.setAttribute('aria-label', labels[repeatMode] || 'Repeat');
 
-        const icon = btnRepeat.querySelector('svg');
+        const icon = btnRepeat.querySelector('.km-symbol, svg');
         if (icon) icon.style.opacity = repeatMode === 'none' ? '0.6' : '1';
     }
 
@@ -1679,15 +2002,15 @@ document.addEventListener('DOMContentLoaded', () => {
         const emoji = safeTrack.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
         const thumbHTML = safeTrack.poster 
             ? `<img src="/stream/${safeTrack.poster}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">` 
-            : `<span>${emoji}</span>`;
+            : symbolHTML(emoji);
         item.innerHTML = `
             <div class="queue-item-thumb" style="display:flex; justify-content:center; align-items:center; overflow:hidden;">${thumbHTML}</div>
             <div class="queue-item-info">
                 <div class="queue-item-title">${escHtml(safeTrack.title || 'Unknown title')}</div>
                 <div class="queue-item-artist">${escHtml(safeTrack.artist || 'Unknown artist')}</div>
             </div>
-            <button class="queue-item-more" title="Tùy chọn">···</button>
-            ${isNow ? '' : `<button class="queue-item-remove" data-idx="${idx}" title="Xóa">✕</button>`}
+            <button class="queue-item-more" title="Tùy chọn">${symbolHTML('more_horiz')}</button>
+            ${isNow ? '' : `<button class="queue-item-remove" data-idx="${idx}" title="Xóa">${symbolHTML('close')}</button>`}
         `;
         item.addEventListener('click', e => {
             if (e.target.closest('.queue-item-remove')) {
@@ -1820,7 +2143,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (posterImg) posterImg.style.display = 'none';
                 artworkIcon.style.display = 'flex';
-                artworkIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                setTrackTypeIcon(artworkIcon, track.type);
             }
             
             const infoLink = document.getElementById('player-info-link');
@@ -1970,10 +2293,14 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch { /* ignore */ }
     });
 
-    // ── Custom event: km:addToQueue (CODE-8 FIX: single deduplicated listener) ──
+    // ── Custom event: km:addToQueue ──────────────────────────────────────────
     document.body.addEventListener('km:addToQueue', e => {
         const track = e.detail;
-        if (track && !queue.find(q => q.src === track.src)) {
+        if (!track || !track.src) return;
+        const alreadyIn = queue.find(q => q.src === track.src);
+        if (alreadyIn) {
+            showToast('Bài hát đã có trong danh sách chờ');
+        } else {
             queue.push(track);
             saveQueue();
             renderQueuePanel();
@@ -1989,7 +2316,18 @@ document.addEventListener('DOMContentLoaded', () => {
 (function() {
     let pendingMediaId = null;
     function getEl(id) { return document.getElementById(id); }
-    function openModal(mediaId) {
+    
+    // Create modal dynamically if Thymeleaf fragment did not render it
+    function ensureModal() {
+        if (getEl('playlist-modal-overlay')) return;
+        const ov = document.createElement('div');
+        ov.id = 'playlist-modal-overlay';
+        ov.className = 'playlist-modal-overlay hidden';
+        ov.innerHTML = '<div class="playlist-modal" id="playlist-modal"><div class="playlist-modal-header"><h3>Th\u00eam v\u00e0o playlist</h3><button class="playlist-modal-close" id="btn-close-playlist-modal"><span class="km-symbol">close</span></button></div><div class="playlist-modal-body" id="playlist-modal-list"><div style="text-align:center;color:#b3b3b3;padding:20px;">\u0110ang t\u1ea3i...</div></div><div class="playlist-modal-footer"><a href="/playlists" style="font-size:13px;color:#1db954;">+ T\u1ea1o playlist m\u1edbi</a></div></div>';
+        document.body.appendChild(ov);
+    }
+function openModal(mediaId) {
+        ensureModal();
         pendingMediaId = mediaId;
         const overlay = getEl('playlist-modal-overlay');
         const list    = getEl('playlist-modal-list');

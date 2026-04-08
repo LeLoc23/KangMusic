@@ -32,6 +32,6 @@ build/
 ### VS Code ###
 .vscode/
 
-
-
+### Media Uploads ###
+src/main/resources/static/media/*mp4
 

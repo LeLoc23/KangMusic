@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Thêm Nhạc Mới - KangMusic')}"></head>
-<body hx-boost="true">
+<body hx-boost="false">
 
 <div class="page-wrapper">
     <div th:replace="~{fragments :: top-bar}"></div>
@@ -16,7 +16,7 @@
                     Quay lại Trang chủ
                 </a>
 
-                <h2>➕ Thêm Bài Hát / Video</h2>
+                <h2>Thêm Bài Hát / Video</h2>
 
                 <!-- Thông báo lỗi -->
                 <div th:if="${error}" class="alert-error" th:text="${error}"></div>
@@ -59,8 +59,8 @@
 
                     <label>Loại nội dung</label>
                     <select name="type">
-                        <option value="AUDIO">🎵 Bài hát (Audio)</option>
-                        <option value="VIDEO">🎬 Video Clip</option>
+                        <option value="AUDIO">Bài hát (Audio)</option>
+                        <option value="VIDEO">Video Clip</option>
                     </select>
 
                     <label>Thời lượng</label>
@@ -76,14 +76,14 @@
                     <label>Thể loại nhạc <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
                     <select name="genre">
                         <option value="">-- Chưa phân loại --</option>
-                        <option value="VIET_POP">🎤 Nhạc Việt Pop</option>
-                        <option value="RELAX">🌿 Thư giãn</option>
-                        <option value="PARTY">🎉 Tiệc tùng</option>
-                        <option value="CHILL">🌙 Chill</option>
-                        <option value="SAD">😢 Buồn</option>
-                        <option value="ENERGETIC">⚡ Năng lượng</option>
-                        <option value="INDIE">🎸 Indie</option>
-                        <option value="LOFI">☕ Lo-fi</option>
+                        <option value="VIET_POP">Nhạc Việt Pop</option>
+                        <option value="RELAX">Thư giãn</option>
+                        <option value="PARTY">Tiệc tùng</option>
+                        <option value="CHILL">Chill</option>
+                        <option value="SAD">Buồn</option>
+                        <option value="ENERGETIC">Năng lượng</option>
+                        <option value="INDIE">Indie</option>
+                        <option value="LOFI">Lo-fi</option>
                     </select>
 
                     <label>Nhãn Cảm Xúc <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
@@ -128,7 +128,7 @@
             typeSelect.value = 'AUDIO';
         }
 
-        durationDp.textContent = '⏳ Đang đọc thời lượng...';
+        durationDp.textContent = 'Đang đọc thời lượng...';
         durationIn.value = '';
 
         const objUrl = URL.createObjectURL(file);
@@ -143,20 +143,20 @@
             URL.revokeObjectURL(objUrl);
             const totalSec = Math.round(media.duration);
             if (!isFinite(totalSec) || totalSec <= 0) {
-                durationDp.textContent = '⚠️ Không đọc được thời lượng (file có thể bị lỗi)';
+                durationDp.textContent = 'Không đọc được thời lượng (file có thể bị lỗi)';
                 return;
             }
             durationIn.value = totalSec;
             const m = Math.floor(totalSec / 60);
             const s = totalSec % 60;
             durationDp.innerHTML =
-                '<span style="color:#1db954; font-weight:600;">✅ ' + m + ' phút ' + s + ' giây</span>' +
+                '<span style="color:#1db954; font-weight:600;">' + m + ' phút ' + s + ' giây</span>' +
                 ' <span style="font-size:11px;color:#b3b3b3;">(' + totalSec + ' giây)</span>';
         });
 
         media.addEventListener('error', function () {
             URL.revokeObjectURL(objUrl);
-            durationDp.textContent = '⚠️ Không đọc được thời lượng – sẽ để trống';
+            durationDp.textContent = 'Không đọc được thời lượng – sẽ để trống';
         });
     });
     
@@ -231,3 +231,4 @@
 
 </body>
 </html>
+

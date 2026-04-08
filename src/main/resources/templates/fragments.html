@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 <head th:fragment="head (title)">
     <meta charset="UTF-8">
@@ -8,7 +8,7 @@
     <title th:text="${title}">KangMusic</title>
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="shortcut icon" th:href="@{/favicon.svg}">
-    <link rel="stylesheet" th:href="@{/css/common.css}">
+    <link rel="stylesheet" th:href="@{/css/common.css(v=2)}">
     <link rel="stylesheet" th:href="@{/css/player.css(v=6)}">
     <link rel="stylesheet" th:href="@{/css/playlist.css}">
     <link rel="stylesheet" th:href="@{/css/modal.css}">
@@ -17,8 +17,14 @@
     <link rel="stylesheet" th:href="@{/css/auth.css}">
     <link rel="stylesheet" th:href="@{/css/admin.css}">
     <link rel="stylesheet" th:href="@{/css/add.css}">
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0">
+    
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer th:src="@{/js/app.js(v=16)}"></script>
+    <script defer th:src="@{/js/app.js(v=17)}"></script>
 </head>
 <body>
 
@@ -28,30 +34,26 @@
     <header th:fragment="top-bar" class="top-bar">
         <!-- Logo -->
         <div class="top-bar-logo">
-            <a th:href="@{/}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="logo-link" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32" style="color:var(--sp-green);">
-                    <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
-                </svg>
+            <a th:href="@{/}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="logo-link" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+                <span class="km-symbol" aria-hidden="true" style="font-size:32px; color:var(--sp-green);">play_circle</span>
                 <span class="brand-text" style="font-size: 20px; font-weight: 800; letter-spacing: -0.5px; color: #fff;">KangMusic</span>
             </a>
         </div>
 
         <!-- Center Nav & Search -->
         <div class="top-bar-center">
-            <a th:href="@{/}" class="top-bar-home" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" title="Trang chủ">
-                <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
+            <a th:href="@{/}" class="top-bar-home" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" title="Trang chủ">
+                <span class="km-symbol" aria-hidden="true">home</span>
             </a>
             <div class="top-bar-search-wrapper">
                 <form th:action="@{/}" method="get" class="global-search-form" id="global-search-form"
                       hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                     <div class="global-search-input-group">
-                        <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24" style="color: #b3b3b3;">
-                            <path d="M16.436 15.022L21 19.586 19.586 21l-4.564-4.564A7.962 7.962 0 0 1 10 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8a7.962 7.962 0 0 1-1.564 5.022zM10 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/>
-                        </svg>
+                        <span class="km-symbol" aria-hidden="true" style="color:#b3b3b3;">search</span>
                         <input id="global-search-input" class="global-search-input" type="text" name="query"
                                th:value="${query}" placeholder="Bạn muốn phát nội dung gì?" autocomplete="off"/>
                         <button type="button" class="global-search-clear" id="global-search-clear" aria-label="Xóa" title="Xóa tìm kiếm">
-                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                            <span class="km-symbol" aria-hidden="true" style="font-size:18px;">close</span>
                         </button>
                     </div>
                     <div class="global-search-dropdown hidden" id="global-search-dropdown">
@@ -68,7 +70,7 @@
             
             <div style="position:relative;">
                 <button class="btn-noti" id="btn-noti" title="Có gì mới">
-                    <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 22a2 2 0 0 1-2-2h4a2 2 0 0 1-2 2zm6-6v2H6v-2l2-2V9a4 4 0 0 1 4-4 4 4 0 0 1 4 4v5l2 2z"/></svg>
+                    <span class="km-symbol" aria-hidden="true" style="font-size:20px;">notifications</span>
                 </button>
                 
                 <!-- Notification Panel -->
@@ -93,9 +95,9 @@
                     <span class="truncate-text" sec:authentication="name" style="display:none;">User</span>
                 </button>
                 <div class="dropdown-content dropdown-content-right">
-                    <a th:href="@{/profile}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">👤 Hồ sơ cá nhân</a>
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">🛠️ Trang Quản Trị</a>
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">⬆️ Tải lên</a>    
+                    <a th:href="@{/profile}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">👤 Hồ sơ cá nhân</a>
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">🛠️ Trang Quản Trị</a>
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">⬆️ Tải lên</a>    
                     <div class="dropdown-divider"></div>
                     <form th:action="@{/logout}" method="post" class="m-0" hx-boost="false">
                         <button type="submit" class="dropdown-logout w-full text-left">🚪 Đăng xuất</button>
@@ -124,13 +126,13 @@
                 <!-- Nút Tạo với dropdown -->
                 <div class="library-create-wrapper" style="position:relative;">
                     <button class="library-action-btn library-create-btn" id="btn-library-create" title="Tạo">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M11 11V5h2v6h6v2h-6v6h-2v-6H5v-2h6z"/></svg>
+                        <span class="km-symbol" aria-hidden="true">add</span>
                     </button>
                     <!-- Create dropdown -->
                     <div class="library-create-dropdown hidden" id="library-create-dropdown">
                         <button class="library-create-option" id="btn-create-playlist">
                             <div class="library-create-option-icon">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+                                <span class="km-symbol" aria-hidden="true" style="font-size:24px;">queue_music</span>
                             </div>
                             <div class="library-create-option-text">
                                 <div class="library-create-option-title">Playlist</div>
@@ -139,7 +141,7 @@
                         </button>
                         <button class="library-create-option" id="btn-create-folder">
                             <div class="library-create-option-icon">
-                                <svg viewBox="0 0 24 24" width="24" height="24" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                                <span class="km-symbol" aria-hidden="true" style="font-size:24px;">create_new_folder</span>
                             </div>
                             <div class="library-create-option-text">
                                 <div class="library-create-option-title">Thư mục</div>
@@ -164,7 +166,7 @@
                 <!-- Search button / input -->
                 <div class="library-search-container">
                     <button class="library-search-btn" id="btn-library-search" title="Tìm kiếm trong thư viện">
-                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M16.436 15.022L21 19.586 19.586 21l-4.564-4.564A7.962 7.962 0 0 1 10 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8a7.962 7.962 0 0 1-1.564 5.022zM10 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/></svg>
+                        <span class="km-symbol" aria-hidden="true" style="font-size:16px;">search</span>
                     </button>
                     <input type="text" class="library-search-input hidden" id="library-search-input" placeholder="Tìm trong thư viện...">
                 </div>
@@ -219,7 +221,7 @@
 
                 <th:block sec:authorize="isAuthenticated()">
                     <!-- Liked Songs -->
-                    <a th:href="@{/library}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="library-item" style="text-decoration:none; color:inherit;" data-name="Bài hát đã thích">
+                    <a th:href="@{/library}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="library-item" style="text-decoration:none; color:inherit;" data-name="Bài hát đã thích">
                         <div class="library-item-thumb liked-songs-bg">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                         </div>
@@ -251,15 +253,16 @@
                 
                 <div class="library-item-thumb">
                     <span th:if="${item.coverEmoji != null}" th:text="${item.coverEmoji}">🎵</span>
-                    <svg th:if="${item.coverEmoji == null}" viewBox="0 0 24 24" width="24" height="24" fill="currentColor">
-                        <path th:if="${item.folder}" d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/>
-                        <path th:unless="${item.folder}" d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/>
-                    </svg>
+                    <span th:if="${item.coverEmoji == null}"
+                          class="km-symbol"
+                          aria-hidden="true"
+                          style="font-size:24px;"
+                          th:text="${item.folder ? 'folder' : 'queue_music'}">queue_music</span>
                 </div>
                 <div class="library-item-info">
                     <div class="library-item-title">
                         <span th:text="${item.name}">Tên</span>
-                        <svg th:if="${item.folder}" class="folder-chevron" viewBox="0 0 24 24" width="16" height="16" fill="currentColor" style="margin-left:auto; transition:0.2s;"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+                        <span th:if="${item.folder}" class="km-symbol folder-chevron" aria-hidden="true" style="margin-left:auto; transition:0.2s;">chevron_right</span>
                     </div>
                     <div class="library-item-desc">
                         <span th:text="${item.folder ? 'Thư mục' : 'Danh sách phát'}">Loại</span> 
@@ -302,23 +305,23 @@
     <!-- CONTEXT MENU & RENAME MODAL -->
     <div id="km-context-menu" class="km-context-menu hidden">
         <button class="km-context-item" id="ctx-rename">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M14.06 9.02l.92.92L5.92 19H5v-.92l9.06-9.06M17.66 3c-.25 0-.51.1-.7.29l-1.83 1.83 3.75 3.75 1.83-1.83c.39-.39.39-1.02 0-1.41l-2.34-2.34c-.2-.2-.45-.29-.71-.29zm-3.6 3.19L3 17.25V21h3.75L17.81 9.94l-3.75-3.75z"/></svg>
+            <span class="km-symbol" aria-hidden="true">edit</span>
             <span>Đổi tên</span>
         </button>
         <button class="km-context-item" id="ctx-delete">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M6 19c0 1.1.9 2 2 2h8c1.1 0 2-.9 2-2V7H6v12zM19 4h-3.5l-1-1h-5l-1 1H5v2h14V4z"/></svg>
+            <span class="km-symbol" aria-hidden="true">delete</span>
             <span>Xoá</span>
         </button>
         <div class="km-context-divider"></div>
         <div class="km-context-item km-has-submenu" id="ctx-move-folder" style="position:relative; justify-content:space-between; cursor:pointer;">
             <div style="display:flex;align-items:center;gap:12px;">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+                <span class="km-symbol" aria-hidden="true">drive_folder_move</span>
                 <span>Di chuyển sang thư mục</span>
             </div>
-            <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>
+            <span class="km-symbol" aria-hidden="true" style="font-size:14px;">chevron_right</span>
             <div id="ctx-move-submenu" class="km-submenu hidden">
                 <div class="km-submenu-search">
-                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color:#b3b3b3;flex-shrink:0;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
+                    <span class="km-symbol" aria-hidden="true" style="font-size:14px; color:#b3b3b3;flex-shrink:0;">search</span>
                     <input type="text" id="ctx-folder-search" placeholder="Tìm thư mục..." />
                 </div>
                 <div id="ctx-folder-list"></div>
@@ -330,11 +333,11 @@
         </div>
         <div class="km-context-divider"></div>
         <button class="km-context-item" id="ctx-create-playlist">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
+            <span class="km-symbol" aria-hidden="true">queue_music</span>
             <span>Tạo danh sách phát</span>
         </button>
         <button class="km-context-item" id="ctx-create-folder">
-            <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
+            <span class="km-symbol" aria-hidden="true">create_new_folder</span>
             <span>Tạo thư mục</span>
         </button>
     </div>
@@ -364,7 +367,7 @@
                 <img id="player-poster-img" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none;">
                 <span class="artwork-icon" id="player-artwork-icon">🎵</span>
             </div>
-            <a href="#" id="player-info-link" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="player-track-info" style="text-decoration:none; cursor:pointer;">
+            <a href="#" id="player-info-link" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true" class="player-track-info" style="text-decoration:none; cursor:pointer;">
                 <div class="player-title" id="player-title" style="color:#fff;">Chọn một bài hát</div>
                 <div class="player-artist" id="player-artist" style="color:#b3b3b3;">-</div>
             </a>
@@ -452,8 +455,8 @@
             <div class="player-expanded-top">
                 <div class="player-expanded-context" id="expanded-context">Đang phát</div>
                 <div class="player-expanded-top-actions">
-                    <button type="button" class="player-expanded-btn" id="btn-expanded-mini" title="Mo mini player">Mini</button>
-                    <button type="button" class="player-expanded-btn" id="btn-expanded-close" title="Thu gon">Thu gọn</button>
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-mini" title="Mini player">ıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llı</button>
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-close" title="Thu gọn">🗒</button>
                 </div>
             </div>
             <div class="player-expanded-scroll" id="player-expanded-scroll">
@@ -487,8 +490,8 @@
             <div class="player-mini-header">
                 <span class="player-mini-label">Mini player</span>
                 <div class="player-mini-actions">
-                    <button type="button" class="player-mini-icon-btn" id="btn-mini-expand" title="Phong to">⤢</button>
-                    <button type="button" class="player-mini-icon-btn" id="btn-mini-close" title="Dong">✕</button>
+                    <button type="button" class="player-mini-icon-btn" id="btn-mini-expand" title="Phóng to">⤢</button>
+                    <button type="button" class="player-mini-icon-btn" id="btn-mini-close" title="Đóng">✕</button>
                 </div>
             </div>
             <div class="player-mini-cover-wrap">
@@ -519,7 +522,7 @@
                     <span>Đang phát</span>
                 </button>
                 <button class="rs-tab-btn rs-tab-queue" id="rs-tab-queue" data-view="queue" title="Danh sách chờ">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h12v2H3v-2z"/></svg>
+                    <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 4h18v2H3V4zm0 11h18v2H3v-2zm0 7h12v2H3v-2z"/></svg>
                     <span>Danh sách chờ</span>
                 </button>
             </div>
@@ -619,7 +622,23 @@
         <!-- 3. VIEW: LYRICS — REMOVED (now showing center overlay) -->
     </aside>
 
-    <!-- MOVED -->
+    <!-- PLAYLIST MODAL (global — always in DOM) -->
+    <div class="playlist-modal-overlay hidden" id="playlist-modal-overlay">
+        <div class="playlist-modal" id="playlist-modal">
+            <div class="playlist-modal-header">
+                <h3>Thêm vào playlist</h3>
+                <button class="playlist-modal-close" id="btn-close-playlist-modal">
+                    <span class="km-symbol" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <div class="playlist-modal-body" id="playlist-modal-list">
+                <div style="text-align:center; color:#b3b3b3; padding:20px;">Đang tải...</div>
+            </div>
+            <div class="playlist-modal-footer">
+                <a href="/playlists" style="font-size:13px; color:#1db954;">+ Tạo playlist mới</a>
+            </div>
+        </div>
+    </div>
 
     <!-- LYRICS OVERLAY (center screen) -->
     <div class="lyrics-overlay" id="lyrics-overlay">
@@ -631,4 +650,3 @@
     </div>
 </body>
 </html>
-

@@ -43,10 +43,56 @@ body {
 }
 a { color: inherit; text-decoration: none; }
 a:hover { color: var(--sp-white); }
+.km-symbol {
+  font-family: 'Material Symbols Rounded';
+  font-weight: 500;
+  font-style: normal;
+  font-size: 1em;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-smoothing: antialiased;
+  font-variation-settings: 'FILL' 1, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+  width: 1em;
+  height: 1em;
+}
+.km-symbol--outline {
+  font-variation-settings: 'FILL' 0, 'wght' 500, 'GRAD' 0, 'opsz' 24;
+}
+.km-symbol--small {
+  font-size: 0.9em;
+}
 button { cursor: pointer; border: none; background: none; font-family: inherit; }
 ::-webkit-scrollbar { width: 6px; }
 ::-webkit-scrollbar-track { background: transparent; }
 ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.3); border-radius: 3px; }
+
+.media-play-btn .km-symbol { font-size: 18px; margin-left: 2px; }
+.control-btn .km-symbol { font-size: 18px; }
+.play-pause-btn .km-symbol { font-size: 28px; }
+.search-play-btn .km-symbol { font-size: 22px; }
+.search-row-icon .km-symbol { font-size: 20px; }
+.queue-item-thumb .km-symbol { font-size: 20px; }
+.queue-item-more .km-symbol { font-size: 18px; }
+.pin-icon .km-symbol { font-size: 14px; vertical-align: middle; }
+.search-top-thumb .km-symbol { font-size: 32px; }
+.empty-state-icon .km-symbol { font-size: inherit; }
+.genre-card-art .km-symbol { font-size: inherit; }
+.track-play-btn .km-symbol,
+.track-remove-btn .km-symbol,
+.playlist-modal-close .km-symbol,
+.player-mini-icon-btn .km-symbol,
+.player-mini-play-btn .km-symbol,
+.lyrics-overlay-close .km-symbol,
+.queue-item-remove .km-symbol {
+  font-size: inherit;
+}
 
 /* GLOBALS & UTILS */
 .hidden { display: none !important; }

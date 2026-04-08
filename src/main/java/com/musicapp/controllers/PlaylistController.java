@@ -167,6 +167,48 @@ public class PlaylistController {
         return ResponseEntity.ok(result);
     }
 
+    @GetMapping("/api/playlists/{id}/tracks")
+    @ResponseBody
+    public ResponseEntity<List<Map<String, Object>>> getPlaylistTracks(
+            @PathVariable Long id,
+            Authentication auth) {
+        Long userId = null;
+        if (auth != null && auth.isAuthenticated() && !"anonymousUser".equals(auth.getName())) {
+            userId = getUserId(auth);
+        }
+
+        var playlistOpt = playlistService.getPlaylistById(id);
+        if (playlistOpt.isEmpty() || playlistOpt.get().isFolder()) {
+            return ResponseEntity.ok(List.of());
+        }
+
+        var playlist = playlistOpt.get();
+        boolean isOwner = userId != null && playlist.getUserId().equals(userId);
+        if (!isOwner && !playlist.isPublic()) {
+            return ResponseEntity.status(403).body(List.of());
+        }
+
+        List<Map<String, Object>> tracks = playlist.getItems().stream()
+                .map(pi -> pi.getMediaItem())
+                .filter(m -> m != null && !m.isDeleted() && m.getFileName() != null)
+                .map(m -> {
+                    Map<String, Object> row = new java.util.LinkedHashMap<>();
+                    row.put("id", m.getId());
+                    row.put("title", m.getTitle());
+                    row.put("artist", m.getArtist());
+                    row.put("src", "/stream/" + m.getFileName());
+                    row.put("type", m.getType() != null ? m.getType().name() : "AUDIO");
+                    row.put("genre", m.getGenre());
+                    row.put("emotion", m.getEmotionLabel());
+                    row.put("lyrics", m.getLyrics());
+                    row.put("poster", m.getPosterFilename());
+                    return row;
+                })
+                .toList();
+
+        return ResponseEntity.ok(tracks);
+    }
+
     // ── API: Danh sách thư mục (cho "Di chuyển sang thư mục") ────────────────
     @GetMapping("/api/my-folders")
     @ResponseBody
