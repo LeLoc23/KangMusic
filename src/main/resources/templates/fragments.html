@@ -6,8 +6,10 @@
     <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
     <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}"/>
     <title th:text="${title}">KangMusic</title>
+    <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
+    <link rel="shortcut icon" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/common.css}">
-    <link rel="stylesheet" th:href="@{/css/player.css}">
+    <link rel="stylesheet" th:href="@{/css/player.css(v=6)}">
     <link rel="stylesheet" th:href="@{/css/playlist.css}">
     <link rel="stylesheet" th:href="@{/css/modal.css}">
     <link rel="stylesheet" th:href="@{/css/track.css}">
@@ -16,7 +18,7 @@
     <link rel="stylesheet" th:href="@{/css/admin.css}">
     <link rel="stylesheet" th:href="@{/css/add.css}">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer th:src="@{/js/app.js(v=6)}"></script>
+    <script defer th:src="@{/js/app.js(v=16)}"></script>
 </head>
 <body>
 
@@ -26,7 +28,7 @@
     <header th:fragment="top-bar" class="top-bar">
         <!-- Logo -->
         <div class="top-bar-logo">
-            <a th:href="@{/}" hx-boost="true" hx-target="#main-content" class="logo-link" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
+            <a th:href="@{/}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="logo-link" style="display:flex; align-items:center; gap:10px; text-decoration:none;">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="32" height="32" style="color:var(--sp-green);">
                     <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/>
                 </svg>
@@ -36,19 +38,26 @@
 
         <!-- Center Nav & Search -->
         <div class="top-bar-center">
-            <a th:href="@{/}" class="top-bar-home" hx-boost="true" hx-target="#main-content" title="Trang chủ">
+            <a th:href="@{/}" class="top-bar-home" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" title="Trang chủ">
                 <svg viewBox="0 0 24 24" fill="currentColor" width="24" height="24"><path d="M10 20v-6h4v6h5v-8h3L12 3 2 12h3v8z"/></svg>
             </a>
             <div class="top-bar-search-wrapper">
                 <form th:action="@{/}" method="get" class="global-search-form" id="global-search-form"
-                      hx-boost="true" hx-target="#main-content" hx-push-url="true"
-                      hx-trigger="submit, keyup changed delay:400ms from:#global-search-input">
+                      hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                     <div class="global-search-input-group">
                         <svg class="search-icon" viewBox="0 0 24 24" fill="currentColor" width="24" height="24" style="color: #b3b3b3;">
                             <path d="M16.436 15.022L21 19.586 19.586 21l-4.564-4.564A7.962 7.962 0 0 1 10 18c-4.418 0-8-3.582-8-8s3.582-8 8-8 8 3.582 8 8a7.962 7.962 0 0 1-1.564 5.022zM10 16a6 6 0 1 0 0-12 6 6 0 0 0 0 12z"/>
                         </svg>
                         <input id="global-search-input" class="global-search-input" type="text" name="query"
                                th:value="${query}" placeholder="Bạn muốn phát nội dung gì?" autocomplete="off"/>
+                        <button type="button" class="global-search-clear" id="global-search-clear" aria-label="Xóa" title="Xóa tìm kiếm">
+                            <svg viewBox="0 0 24 24" width="18" height="18" fill="currentColor"><path d="M18 6L6 18M6 6l12 12" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+                        </button>
+                    </div>
+                    <div class="global-search-dropdown hidden" id="global-search-dropdown">
+                        <div class="search-dropdown-scroll" id="search-dropdown-content">
+                            <!-- filled by JS -->
+                        </div>
                     </div>
                 </form>
             </div>
@@ -84,9 +93,9 @@
                     <span class="truncate-text" sec:authentication="name" style="display:none;">User</span>
                 </button>
                 <div class="dropdown-content dropdown-content-right">
-                    <a th:href="@{/profile}" hx-boost="true">👤 Hồ sơ cá nhân</a>
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}" hx-boost="true">🛠️ Trang Quản Trị</a>
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="true">⬆️ Tải lên</a>    
+                    <a th:href="@{/profile}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">👤 Hồ sơ cá nhân</a>
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">🛠️ Trang Quản Trị</a>
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML">⬆️ Tải lên</a>    
                     <div class="dropdown-divider"></div>
                     <form th:action="@{/logout}" method="post" class="m-0" hx-boost="false">
                         <button type="submit" class="dropdown-logout w-full text-left">🚪 Đăng xuất</button>
@@ -210,7 +219,7 @@
 
                 <th:block sec:authorize="isAuthenticated()">
                     <!-- Liked Songs -->
-                    <a th:href="@{/library}" hx-boost="true" hx-target="#main-content" class="library-item" style="text-decoration:none; color:inherit;" data-name="Bài hát đã thích">
+                    <a th:href="@{/library}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="library-item" style="text-decoration:none; color:inherit;" data-name="Bài hát đã thích">
                         <div class="library-item-thumb liked-songs-bg">
                             <svg viewBox="0 0 24 24" width="20" height="20" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
                         </div>
@@ -310,36 +319,36 @@
             <div id="ctx-move-submenu" class="km-submenu hidden">
                 <div class="km-submenu-search">
                     <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor" style="color:#b3b3b3;flex-shrink:0;"><path d="M15.5 14h-.79l-.28-.27C15.41 12.59 16 11.11 16 9.5 16 5.91 13.09 3 9.5 3S3 5.91 3 9.5 5.91 16 9.5 16c1.61 0 3.09-.59 4.23-1.57l.27.28v.79l5 4.99L20.49 19l-4.99-5zm-6 0C7.01 14 5 11.99 5 9.5S7.01 5 9.5 5 14 7.01 14 9.5 11.99 14 9.5 14z"/></svg>
-                    <input type="text" id="ctx-folder-search" placeholder="Tim thu muc..." />
+                    <input type="text" id="ctx-folder-search" placeholder="Tìm thư mục..." />
                 </div>
                 <div id="ctx-folder-list"></div>
                 <div class="km-context-divider" style="margin:4px 0;"></div>
                 <button class="km-context-item" id="ctx-remove-from-folder" style="font-size:13px;">
-                    <span>Xoa khoi cac thu muc</span>
+                    <span>Xóa khỏi các thư mục</span>
                 </button>
             </div>
         </div>
         <div class="km-context-divider"></div>
         <button class="km-context-item" id="ctx-create-playlist">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 3v10.55c-.59-.34-1.27-.55-2-.55-2.21 0-4 1.79-4 4s1.79 4 4 4 4-1.79 4-4V7h4V3h-6z"/></svg>
-            <span>Tao danh sach phat</span>
+            <span>Tạo danh sách phát</span>
         </button>
         <button class="km-context-item" id="ctx-create-folder">
             <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M10 4H4c-1.1 0-1.99.9-1.99 2L2 18c0 1.1.9 2 2 2h16c1.1 0 2-.9 2-2V8c0-1.1-.9-2-2-2h-8l-2-2z"/></svg>
-            <span>Tao thu muc</span>
+            <span>Tạo thư mục</span>
         </button>
     </div>
 
     <!-- RENAME MODAL -->
     <div id="rename-modal-overlay" class="hidden" style="position:fixed; inset:0; background:rgba(0,0,0,0.73); z-index:4000; display:flex; align-items:center; justify-content:center;">
         <div class="rename-modal-box" style="background:#282828; border-radius:12px; padding:24px; width:340px; box-shadow: 0 12px 32px rgba(0,0,0,0.5);">
-            <h3 style="font-size:18px; font-weight:800; margin-bottom:16px; color:#fff;">Doi ten</h3>
+            <h3 style="font-size:18px; font-weight:800; margin-bottom:16px; color:#fff;">Đổi tên</h3>
             <div style="margin-bottom:20px;">
-                <input type="text" id="rename-modal-input" style="width:100%; background:#3e3e3e; border:1px solid transparent; border-radius:4px; padding:12px; color:#fff; font-size:15px; outline:none;" placeholder="Ten moi...">
+                <input type="text" id="rename-modal-input" style="width:100%; background:#3e3e3e; border:1px solid transparent; border-radius:4px; padding:12px; color:#fff; font-size:15px; outline:none;" placeholder="Tên mới...">
             </div>
             <div style="display:flex; gap:12px; justify-content:flex-end;">
-                <button type="button" id="rename-modal-cancel" style="padding:8px 16px; background:transparent; color:#fff; font-weight:700; cursor:pointer; border:none;">Huy</button>
-                <button type="button" id="rename-modal-confirm" style="padding:8px 24px; border-radius:500px; background:#fff; color:#000; font-weight:700; cursor:pointer; border:none;">Luu</button>
+                <button type="button" id="rename-modal-cancel" style="padding:8px 16px; background:transparent; color:#fff; font-weight:700; cursor:pointer; border:none;">Hủy</button>
+                <button type="button" id="rename-modal-confirm" style="padding:8px 24px; border-radius:500px; background:#fff; color:#000; font-weight:700; cursor:pointer; border:none;">Lưu</button>
             </div>
         </div>
     </div>
@@ -355,7 +364,7 @@
                 <img id="player-poster-img" style="position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:none;">
                 <span class="artwork-icon" id="player-artwork-icon">🎵</span>
             </div>
-            <a href="#" id="player-info-link" hx-boost="true" hx-target="#main-content" class="player-track-info" style="text-decoration:none; cursor:pointer;">
+            <a href="#" id="player-info-link" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" class="player-track-info" style="text-decoration:none; cursor:pointer;">
                 <div class="player-title" id="player-title" style="color:#fff;">Chọn một bài hát</div>
                 <div class="player-artist" id="player-artist" style="color:#b3b3b3;">-</div>
             </a>
@@ -407,7 +416,7 @@
                     <path d="M21.5 5.5v13h-4v-13h4zM16.5 7.5v9h-4v-9h4zM11.5 9.5v5h-4v-5h4zM6.5 11.5v1h-4v-1h4z"/>
                 </svg>
             </button>
-            <button class="player-right-btn" id="btn-lyrics" title="Lời bài hát" aria-label="Lyrics">
+            <button type="button" class="player-right-btn" id="btn-lyrics" title="Lời bài hát" aria-label="Lyrics">
                 <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
                     <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
                 </svg>
@@ -422,6 +431,81 @@
                 <input type="range" class="volume-slider" id="volume-slider"
                        min="0" max="1" step="0.01" value="1">
             </div>
+            <button type="button" class="player-right-btn" id="btn-player-mini" title="Mini player" aria-label="Mini player">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <rect x="3" y="5" width="18" height="14" rx="2"></rect>
+                    <line x1="8" y1="16" x2="16" y2="16"></line>
+                </svg>
+            </button>
+            <button type="button" class="player-right-btn" id="btn-player-expand" title="Phóng to trình phát" aria-label="Expand player">
+                <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2">
+                    <polyline points="15 3 21 3 21 9"></polyline>
+                    <polyline points="9 21 3 21 3 15"></polyline>
+                    <line x1="21" y1="3" x2="14" y2="10"></line>
+                    <line x1="3" y1="21" x2="10" y2="14"></line>
+                </svg>
+            </button>
+        </div>
+
+        <!-- Expanded Player Overlay -->
+        <div class="player-expanded-overlay" id="player-expanded-overlay" aria-hidden="true">
+            <div class="player-expanded-top">
+                <div class="player-expanded-context" id="expanded-context">Đang phát</div>
+                <div class="player-expanded-top-actions">
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-mini" title="Mo mini player">Mini</button>
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-close" title="Thu gon">Thu gọn</button>
+                </div>
+            </div>
+            <div class="player-expanded-scroll" id="player-expanded-scroll">
+                <section class="player-expanded-hero">
+                    <div class="player-expanded-center">
+                        <div class="player-expanded-cover" id="expanded-cover-wrap">
+                            <video id="expanded-video" class="player-expanded-video" playsinline muted preload="metadata" style="display:none;"></video>
+                            <img id="expanded-cover-img" alt="Cover" style="display:none;">
+                            <div id="expanded-cover-icon" class="player-expanded-cover-icon">🎵</div>
+                        </div>
+                        <div class="player-expanded-title" id="expanded-track-title">Tên bài hát</div>
+                        <div class="player-expanded-artist" id="expanded-track-artist">Ca sĩ</div>
+                    </div>
+                </section>
+
+                <section class="player-expanded-details">
+                    <div class="player-expanded-card">
+                        <div class="player-expanded-card-head">Lời bài hát</div>
+                        <div id="expanded-lyrics-preview" class="player-expanded-card-body"></div>
+                    </div>
+                    <div class="player-expanded-card">
+                        <div class="player-expanded-card-head">Tiếp theo trong danh sách chờ</div>
+                        <div id="expanded-queue-preview" class="player-expanded-card-body"></div>
+                    </div>
+                </section>
+            </div>
+        </div>
+
+        <!-- Floating Mini Player -->
+        <div class="player-mini-window" id="player-mini-window" aria-hidden="true">
+            <div class="player-mini-header">
+                <span class="player-mini-label">Mini player</span>
+                <div class="player-mini-actions">
+                    <button type="button" class="player-mini-icon-btn" id="btn-mini-expand" title="Phong to">⤢</button>
+                    <button type="button" class="player-mini-icon-btn" id="btn-mini-close" title="Dong">✕</button>
+                </div>
+            </div>
+            <div class="player-mini-cover-wrap">
+                <video id="mini-video" class="player-mini-video" playsinline muted preload="metadata" style="display:none;"></video>
+                <img id="mini-cover-img" alt="Cover" style="display:none;">
+                <div id="mini-cover-icon" class="player-mini-cover-icon">🎵</div>
+                <button type="button" id="btn-mini-play-pause" class="player-mini-play-btn" aria-label="Play/Pause">▶</button>
+            </div>
+            <div class="player-mini-meta">
+                <div class="player-mini-title" id="mini-track-title">Tên bài hát</div>
+                <div class="player-mini-artist" id="mini-track-artist">Ca sĩ</div>
+            </div>
+            <div class="player-mini-progress-row">
+                <span class="player-mini-time" id="mini-current-time">0:00</span>
+                <input type="range" id="mini-seek-bar" class="player-mini-seek" min="0" max="100" step="0.1" value="0">
+                <span class="player-mini-time" id="mini-total-time">0:00</span>
+            </div>
         </div>
     </div>
 
@@ -429,7 +513,7 @@
     <aside th:fragment="right-sidebar" id="right-sidebar" class="right-sidebar view-playing">
         <!-- Sidebar Header with view tabs -->
         <div class="right-sidebar-header" id="rs-header">
-            <div class="rs-header-tabs">
+        <div class="rs-header-tabs">
                 <button class="rs-tab-btn rs-tab-playing active" id="rs-tab-playing" data-view="playing" title="Đang phát">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 14.5v-9l6 4.5-6 4.5z"/></svg>
                     <span>Đang phát</span>
@@ -437,10 +521,6 @@
                 <button class="rs-tab-btn rs-tab-queue" id="rs-tab-queue" data-view="queue" title="Danh sách chờ">
                     <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor"><path d="M3 4h18v2H3V4zm0 7h18v2H3v-2zm0 7h12v2H3v-2z"/></svg>
                     <span>Danh sách chờ</span>
-                </button>
-                <button class="rs-tab-btn rs-tab-lyrics" id="rs-tab-lyrics" data-view="lyrics" title="Lời bài hát">
-                    <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/><line x1="16" y1="13" x2="8" y2="13"/></svg>
-                    <span>Lời bài hát</span>
                 </button>
             </div>
             <div class="rs-header-actions">
@@ -488,7 +568,6 @@
                                 </svg>
                             </button>
                         </div>
-                        </div>
                     </div>
                     <a href="#" id="rs-track-artist" class="rs-artist">Ca sĩ</a>
                 </div>
@@ -530,23 +609,26 @@
                     </div>
                     <div class="queue-list" id="queue-list-sidebar"></div>
                 </div>
-                <div id="queue-empty-state" class="queue-empty" style="display:none;">
+                <div id="queue-empty-state" class="queue-empty" style="display:block;">
                     🎵 Danh sách chờ trống
                 </div>
                 <div style="height: 40px;"></div>
             </div>
         </div>
 
-        <!-- 3. VIEW: LYRICS -->
-        <div class="rs-view rs-view-lyrics">
-            <div class="right-sidebar-scroll-container">
-                <div id="lyrics-content-sidebar" class="lyrics-text-sidebar"></div>
-                <div style="height: 40px;"></div>
-            </div>
-        </div>
+        <!-- 3. VIEW: LYRICS — REMOVED (now showing center overlay) -->
     </aside>
 
     <!-- MOVED -->
 
+    <!-- LYRICS OVERLAY (center screen) -->
+    <div class="lyrics-overlay" id="lyrics-overlay">
+        <button class="lyrics-overlay-close" id="btn-close-lyrics-overlay" title="Đóng lời bài hát">✕</button>
+        <div class="lyrics-overlay-inner">
+            <div class="lyrics-overlay-title" id="lyrics-overlay-track-name">Lời bài hát</div>
+            <div id="lyrics-overlay-content" class="lyrics-overlay-text"></div>
+        </div>
+    </div>
 </body>
 </html>
+

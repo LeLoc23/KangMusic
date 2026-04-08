@@ -1,7 +1,7 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Playlist - KangMusic')}"></head>
-<body hx-boost="true">
+<body hx-boost="false">
 <div class="page-wrapper">
     <div th:replace="~{fragments :: top-bar}"></div>
     <div class="main-layout">
@@ -191,27 +191,6 @@
     <div th:replace="~{fragments :: global-player}"></div>
 </div>
 
-<script>
-// Phát tất cả bài trong playlist
-document.getElementById('btn-play-all')?.addEventListener('click', function() {
-    const rows = document.querySelectorAll('.track-row');
-    if (!rows.length) return;
-    rows[0].querySelector('.track-play-btn')?.click();
-    for (let i = 1; i < rows.length; i++) {
-        const btn = rows[i].querySelector('.track-play-btn');
-        if (btn) {
-            const track = {
-                id: btn.dataset.id, title: btn.dataset.title,
-                artist: btn.dataset.artist, src: btn.dataset.src,
-                type: btn.dataset.type || 'AUDIO',
-                genre: btn.dataset.genre || '', emotion: btn.dataset.emotion || '',
-                lyrics: btn.dataset.lyrics || '',
-                poster: btn.dataset.poster || ''
-            };
-            document.body.dispatchEvent(new CustomEvent('km:addToQueue', { detail: track }));
-        }
-    }
-});
-</script>
 </body>
 </html>
+

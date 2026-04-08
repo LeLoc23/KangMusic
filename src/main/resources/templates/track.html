@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
 
 <head th:replace="~{fragments :: head(${track.title + ' - KangMusic'})}"></head>
@@ -8,17 +8,12 @@
         <div th:replace="~{fragments :: top-bar}"></div>
         <div class="main-layout">
             <div th:replace="~{fragments :: library-sidebar}"></div>
-            <main class="content-area" id="main-content" th:fragment="main-content">
+            <main class="content-area" id="main-content" th:fragment="main-content"
+                th:with="pageTitle=${track.title} + ' - ' + ${track.artist}">
 
                 <!-- Back button -->
                 <div class="content-header">
-                    <div class="content-nav-btns">
-                        <button class="content-nav-btn" onclick="history.back()">
-                            <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor">
-                                <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z" />
-                            </svg>
-                        </button>
-                    </div>
+                    <h2 class="page-title" th:text="${pageTitle}">Bài hát</h2>
                 </div>
 
                 <div class="content-body">
@@ -159,7 +154,7 @@
                         <div class="section-header">
                             <span class="section-title">🎵 Nghe tiếp</span>
                         </div>
-                        <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                        <div class="horizontal-scroll" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                             <div th:each="item : ${similar}" class="media-card">
                                 <div class="media-card-artwork">
                                     <img th:if="${item.posterFilename != null}" 
@@ -248,7 +243,7 @@
                         <div class="section-header">
                             <span class="section-title">🎧 Nhạc Mới</span>
                         </div>
-                        <div class="horizontal-scroll" hx-boost="true" hx-target="#main-content" hx-push-url="true">
+                        <div class="horizontal-scroll" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                             <div th:each="item : ${recommendations}" class="media-card">
                                 <div class="media-card-artwork">
                                     <img th:if="${item.posterFilename != null}" 
@@ -338,73 +333,7 @@
         </div>
     </div>
 
-    <script>
-        document.addEventListener('DOMContentLoaded', function () {
-            // Nút PHÁT TO — kích hoạt player bar
-            const btnPlay = document.getElementById('btn-track-play');
-            if (btnPlay) {
-                btnPlay.addEventListener('click', function () {
-                    // Trigger qua class media-play-btn để app.js xử lý
-                    const clone = document.createElement('button');
-                    clone.className = 'media-play-btn';
-                    ['id', 'title', 'artist', 'src', 'type', 'genre', 'emotion', 'lyrics', 'poster'].forEach(k => {
-                        if (btnPlay.dataset[k]) clone.dataset[k] = btnPlay.dataset[k];
-                    });
-                    clone.style.display = 'none';
-                    document.body.appendChild(clone);
-                    clone.click();
-                    document.body.removeChild(clone);
-                });
-            }
-
-            // Nút Thêm vào hàng chờ
-            const btnQueue = document.getElementById('btn-track-queue');
-            if (btnQueue) {
-                btnQueue.addEventListener('click', function () {
-                    const track = {
-                        id: btnQueue.dataset.id, title: btnQueue.dataset.title,
-                        artist: btnQueue.dataset.artist, src: btnQueue.dataset.src,
-                        type: btnQueue.dataset.type || 'AUDIO',
-                        genre: btnQueue.dataset.genre || '', emotion: btnQueue.dataset.emotion || '',
-                        lyrics: btnQueue.dataset.lyrics || '', poster: btnQueue.dataset.poster || ''
-                    };
-                    document.body.dispatchEvent(new CustomEvent('km:addToQueue', { detail: track }));
-                });
-            }
-
-            // Nút Like
-            const btnLike = document.getElementById('btn-track-like');
-            if (btnLike) {
-                btnLike.addEventListener('click', async function () {
-                    const mediaId = btnLike.dataset.id;
-                    if (!mediaId) return;
-                    try {
-                        const res = await fetch('/api/library/toggle', {
-                            method: 'POST',
-                            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-                            body: 'mediaItemId=' + mediaId
-                        });
-                        if (res.status === 401) { alert('Hãy đăng nhập để yêu thích!'); return; }
-                        const data = await res.json();
-                        btnLike.classList.toggle('liked', data.liked);
-                    } catch (e) { console.error('Lỗi toggle thả tim', e); }
-                });
-            }
-
-            // Tabs logic
-            const tabBtns = document.querySelectorAll('.track-tab-btn');
-            const tabContents = document.querySelectorAll('.track-tab-content');
-            tabBtns.forEach(btn => {
-                btn.addEventListener('click', () => {
-                    tabBtns.forEach(b => b.classList.remove('active'));
-                    tabContents.forEach(c => c.classList.remove('active'));
-                    btn.classList.add('active');
-                    const target = document.getElementById('tab-' + btn.dataset.tab);
-                    if (target) target.classList.add('active');
-                });
-            });
-        });
-    </script>
 </body>
 
 </html>
+

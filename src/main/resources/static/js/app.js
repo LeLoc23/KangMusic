@@ -26,8 +26,232 @@ document.addEventListener('DOMContentLoaded', () => {
             a.classList.toggle('active', a.getAttribute('href') === path);
         });
     }
+
+    function isShellRoute(urlObj) {
+        const path = urlObj.pathname;
+        return path === '/'
+            || path === '/library'
+            || path === '/profile'
+            || path === '/admin'
+            || path.startsWith('/track/')
+            || path.startsWith('/playlists');
+    }
+
+    function navigateMainContent(url) {
+        if (!window.htmx) return false;
+        const target = document.getElementById('main-content');
+        if (!target) return false;
+
+        let urlObj;
+        try {
+            urlObj = new URL(url, window.location.origin);
+        } catch {
+            return false;
+        }
+        if (urlObj.origin !== window.location.origin) return false;
+        if (!isShellRoute(urlObj)) return false;
+
+        window.htmx.ajax('GET', `${urlObj.pathname}${urlObj.search}`, {
+            target: '#main-content',
+            select: '#main-content',
+            swap: 'outerHTML',
+            pushUrl: true
+        });
+        return true;
+    }
+
+    function shouldHandleSpaLink(link, e) {
+        if (!link || !window.htmx) return false;
+        if (e.defaultPrevented) return false;
+        if (e.button !== 0 || e.metaKey || e.ctrlKey || e.shiftKey || e.altKey) return false;
+        if (link.hasAttribute('download')) return false;
+        const target = link.getAttribute('target');
+        if (target && target !== '_self') return false;
+        const href = link.getAttribute('href');
+        if (!href || href.startsWith('#') || href.startsWith('javascript:')) return false;
+        if (link.hasAttribute('hx-get') || link.hasAttribute('hx-post') || link.hasAttribute('hx-put') || link.hasAttribute('hx-delete')) return false;
+        return true;
+    }
+
+    document.body.addEventListener('click', e => {
+        const link = e.target.closest('a[href]');
+        if (!shouldHandleSpaLink(link, e)) return;
+
+        if (navigateMainContent(link.href)) {
+            e.preventDefault();
+        }
+    });
+
     document.body.addEventListener('htmx:afterOnLoad', updateActiveNav);
+    document.body.addEventListener('htmx:afterSwap', e => {
+        const target = e.detail?.target || e.target;
+        if (target && target.id === 'main-content') {
+            target.scrollTop = 0;
+            initContentAreaScroll();
+            updateActiveNav();
+        }
+    });
     updateActiveNav();
+    initGlobalSearchDropdown();
+
+    // Global search dropdown (recent + suggestions)
+    function initGlobalSearchDropdown() {
+        const input     = document.getElementById('global-search-input');
+        const form      = document.getElementById('global-search-form');
+        const dropdown  = document.getElementById('global-search-dropdown');
+        const content   = document.getElementById('search-dropdown-content');
+        const clearBtn  = document.getElementById('global-search-clear');
+        if (!input || !form || !dropdown || !content) return;
+
+        const RECENT_KEY = 'km_recent_searches';
+        const MAX_RECENT = 8;
+        let debounceTimer = null;
+        let lastSuggestions = [];
+
+        function loadRecent() {
+            try { return JSON.parse(localStorage.getItem(RECENT_KEY) || '[]'); }
+            catch { return []; }
+        }
+        function saveRecent(list) {
+            try { localStorage.setItem(RECENT_KEY, JSON.stringify(list.slice(0, MAX_RECENT))); }
+            catch {}
+        }
+        function pushRecent(q) {
+            if (!q || !q.trim()) return;
+            const list = loadRecent().filter(item => item.q.toLowerCase() !== q.toLowerCase());
+            list.unshift({ q, ts: Date.now() });
+            saveRecent(list);
+        }
+
+        function renderRecent() {
+            const list = loadRecent();
+            if (!list.length) return '';
+            const items = list.map(item => `
+                <button class=\"search-row\" data-q=\"${item.q}\">
+                    <span class=\"search-row-icon\">⌘</span>
+                    <div class=\"search-row-text\">
+                        <div class=\"search-row-title\">${item.q}</div>
+                        <div class=\"search-row-sub\">Tìm kiếm gần đây</div>
+                    </div>
+                </button>
+            `).join('');
+            return `
+                <div class=\"search-section\">
+                    <div class=\"search-section-title\">Các tìm kiếm gần đây</div>
+                    <div class=\"search-list\">${items}</div>
+                    <button class=\"search-clear-btn\" id=\"btn-clear-recents\">Xoá các tìm kiếm gần đây</button>
+                </div>
+            `;
+        }
+
+        function renderSuggestions(items) {
+            if (!items || !items.length) return '';
+            const rows = items.map(item => `
+                <button class=\"search-row\" data-q=\"${item.title}\" data-id=\"${item.id || ''}\">
+                    <span class=\"search-row-icon\">
+                        ${item.posterSrc ? `<img src=\"${item.posterSrc}\" class=\"search-row-thumb\">`
+                          : item.posterFilename ? `<img src=\"/stream/${item.posterFilename}\" class=\"search-row-thumb\">`
+                          : '🔍'}
+                    </span>
+                    <div class=\"search-row-text\">
+                        <div class=\"search-row-title\">${item.title}</div>
+                        <div class=\"search-row-sub\">${item.artist || ''}</div>
+                    </div>
+                </button>
+            `).join('');
+            return `
+                <div class=\"search-section\">
+                    <div class=\"search-section-title\">Gợi ý</div>
+                    <div class=\"search-list\">${rows}</div>
+                </div>
+            `;
+        }
+
+        function openDropdown(html) {
+            content.innerHTML = html;
+            dropdown.classList.remove('hidden');
+        }
+        function closeDropdown() { dropdown.classList.add('hidden'); }
+
+        function buildDropdown(q, suggestions=[]) {
+            const recentHtml = renderRecent();
+            const suggestHtml = renderSuggestions(suggestions);
+            const html = (recentHtml || suggestHtml) ? `${recentHtml}${suggestHtml}` :
+                `<div class=\"search-section\"><div class=\"search-section-title\">Không có gợi ý</div></div>`;
+            openDropdown(html);
+        }
+
+        function fetchSuggest(q) {
+            if (!q || !q.trim()) { buildDropdown('', []); return; }
+            fetch(`/api/search?q=${encodeURIComponent(q)}`)
+                .then(r => r.ok ? r.json() : [])
+                .then(data => { lastSuggestions = data || []; buildDropdown(q, data); })
+                .catch(() => { lastSuggestions = []; buildDropdown(q, []); });
+        }
+
+        input.addEventListener('focus', () => { buildDropdown('', []); });
+        input.addEventListener('input', () => {
+            const q = input.value;
+            clearTimeout(debounceTimer);
+            debounceTimer = setTimeout(() => fetchSuggest(q), 180);
+        });
+        input.addEventListener('keydown', e => {
+            if (e.key === 'Enter') {
+                // Chỉ submit form bình thường — không tự fill tên bài vào input
+                pushRecent(input.value);
+                // allow normal form submit (HTMX) by not preventing default
+            }
+        });
+        form.addEventListener('submit', e => {
+            pushRecent(input.value);
+
+            const formData = new FormData(form);
+            const params = new URLSearchParams(formData);
+            const action = form.getAttribute('action') || window.location.pathname;
+            const nextUrl = params.toString() ? `${action}?${params.toString()}` : action;
+
+            if (navigateMainContent(nextUrl)) {
+                e.preventDefault();
+                closeDropdown();
+            }
+        });
+        clearBtn?.addEventListener('click', () => { input.value=''; input.focus(); buildDropdown('', []); });
+
+        // Dùng mousedown thay vì click để xử lý trước khi blur đóng dropdown
+        content.addEventListener('mousedown', e => {
+            // Xử lý nút xoá lịch sử
+            if (e.target.id === 'btn-clear-recents') {
+                e.preventDefault();
+                saveRecent([]);
+                buildDropdown('', []);
+                return;
+            }
+
+            const row = e.target.closest('.search-row');
+            if (!row) return;
+            e.preventDefault(); // Ngăn input mất focus trước khi xử lý
+
+            const q = row.dataset.q || '';
+            const id = row.dataset.id || '';
+            input.value = q;
+            pushRecent(q);
+            closeDropdown();
+
+            if (id) {
+                // Gợi ý track — vào thẳng trang track
+                const trackUrl = `/track/${id}`;
+                if (!navigateMainContent(trackUrl)) {
+                    window.location.href = trackUrl;
+                }
+            } else {
+                // Tìm kiếm gần đây — submit form
+                form.requestSubmit();
+            }
+        });
+        document.addEventListener('click', e => {
+            if (!dropdown.contains(e.target) && !form.contains(e.target)) closeDropdown();
+        });
+    }
 
     // ── Player elements ────────────────────────────────────────────────────
     const audio         = document.getElementById('master-audio');
@@ -47,11 +271,65 @@ document.addEventListener('DOMContentLoaded', () => {
     const volumeSlider  = document.getElementById('volume-slider');
     const currentTimeEl = document.getElementById('player-current-time');
     const totalTimeEl   = document.getElementById('player-total-time');
+    const btnPlayerMini   = document.getElementById('btn-player-mini');
+    const btnPlayerExpand = document.getElementById('btn-player-expand');
 
     // Right Sidebar Elements
     const rightSidebar      = document.getElementById('right-sidebar');
     const queueListSide     = document.getElementById('queue-list-sidebar');
-    const lyricsContentSide = document.getElementById('lyrics-content-sidebar');
+    const rsBtnFullscreen   = document.getElementById('rs-btn-fullscreen');
+
+    // Expanded Player Elements
+    const expandedOverlay       = document.getElementById('player-expanded-overlay');
+    const expandedScroll        = document.getElementById('player-expanded-scroll');
+    const expandedCoverWrap     = document.getElementById('expanded-cover-wrap');
+    const expandedContext       = document.getElementById('expanded-context');
+    const expandedVideo         = document.getElementById('expanded-video');
+    const expandedCoverImg      = document.getElementById('expanded-cover-img');
+    const expandedCoverIcon     = document.getElementById('expanded-cover-icon');
+    const expandedTrackTitle    = document.getElementById('expanded-track-title');
+    const expandedTrackArtist   = document.getElementById('expanded-track-artist');
+    const expandedLyricsPreview = document.getElementById('expanded-lyrics-preview');
+    const expandedQueuePreview  = document.getElementById('expanded-queue-preview');
+    const btnExpandedMini       = document.getElementById('btn-expanded-mini');
+    const btnExpandedClose      = document.getElementById('btn-expanded-close');
+
+    // Mini Player Elements
+    const miniWindow      = document.getElementById('player-mini-window');
+    const btnMiniClose    = document.getElementById('btn-mini-close');
+    const btnMiniExpand   = document.getElementById('btn-mini-expand');
+    const btnMiniPlay     = document.getElementById('btn-mini-play-pause');
+    const miniVideo       = document.getElementById('mini-video');
+    const miniCoverImg    = document.getElementById('mini-cover-img');
+    const miniCoverIcon   = document.getElementById('mini-cover-icon');
+    const miniTrackTitle  = document.getElementById('mini-track-title');
+    const miniTrackArtist = document.getElementById('mini-track-artist');
+    const miniSeekBar     = document.getElementById('mini-seek-bar');
+    const miniCurrentTime = document.getElementById('mini-current-time');
+    const miniTotalTime   = document.getElementById('mini-total-time');
+    let lyricsOverlay     = document.getElementById('lyrics-overlay');
+    let lyricsOverlayTitle = document.getElementById('lyrics-overlay-track-name');
+    let lyricsOverlayContent = document.getElementById('lyrics-overlay-content');
+    let btnCloseLyricsOverlay = document.getElementById('btn-close-lyrics-overlay');
+
+    // Fallback: if overlay markup is not rendered from fragments, create it dynamically.
+    if (!lyricsOverlay) {
+        const overlay = document.createElement('div');
+        overlay.className = 'lyrics-overlay';
+        overlay.id = 'lyrics-overlay';
+        overlay.innerHTML = `
+            <button class="lyrics-overlay-close" id="btn-close-lyrics-overlay" title="Dong loi bai hat">✕</button>
+            <div class="lyrics-overlay-inner">
+                <div class="lyrics-overlay-title" id="lyrics-overlay-track-name">Loi bai hat</div>
+                <div id="lyrics-overlay-content" class="lyrics-overlay-text"></div>
+            </div>
+        `;
+        document.body.appendChild(overlay);
+        lyricsOverlay = overlay;
+        lyricsOverlayTitle = overlay.querySelector('#lyrics-overlay-track-name');
+        lyricsOverlayContent = overlay.querySelector('#lyrics-overlay-content');
+        btnCloseLyricsOverlay = overlay.querySelector('#btn-close-lyrics-overlay');
+    }
 
     if (!audio) return; // trang không có player
 
@@ -62,11 +340,653 @@ document.addEventListener('DOMContentLoaded', () => {
     let repeatMode  = 'none';        // 'none' | 'one' | 'all'
     let isDragging  = false;
     let currentTrack = null;
+    let isExpandedPlayerVisible = false;
+    let isMiniPlayerVisible = false;
+    let miniPopup = null;
+    let miniPopupDom = null;
 
     const PLAY_SVG  = `<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M8 5v14l11-7z"/></svg>`;
     const PAUSE_SVG = `<svg viewBox="0 0 24 24" fill="currentColor" width="28" height="28"><path d="M6 19h4V5H6v14zm8-14v14h4V5h-4z"/></svg>`;
+    const MINI_PLAY_ICON = '>';
+    const MINI_PAUSE_ICON = '||';
+    const VIDEO_ICON = '\uD83C\uDFAC';
+    const AUDIO_ICON = '\uD83C\uDFB5';
 
-    // ── localStorage helpers ───────────────────────────────────────────────
+    function hasPlayableTrack() {
+        return !!(currentTrack && currentTrack.src);
+    }
+
+    function getPlayingContextLabel() {
+        const idx = queueIndex + 1;
+        const total = queue.length;
+        if (total > 0) return `Dang phat ${idx}/${total}`;
+        return 'Dang phat';
+    }
+
+    function renderExpandedQueuePreview() {
+        if (!expandedQueuePreview) return;
+        const upcoming = queue.slice(queueIndex + 1, queueIndex + 6);
+        if (upcoming.length === 0) {
+            expandedQueuePreview.innerHTML = '<div class="player-expanded-empty">Danh sach cho trong.</div>';
+            return;
+        }
+        expandedQueuePreview.innerHTML = upcoming.map((track, i) => {
+            const idx = queueIndex + 1 + i;
+            const emoji = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+            return `
+                <button type="button" class="player-expanded-queue-item" data-idx="${idx}">
+                    <span>${emoji}</span>
+                    <span>
+                        <div class="player-expanded-queue-item-title">${escHtml(track.title || 'Unknown title')}</div>
+                        <div class="player-expanded-queue-item-artist">${escHtml(track.artist || 'Unknown artist')}</div>
+                    </span>
+                </button>
+            `;
+        }).join('');
+    }
+
+    function clearExpandedVideo() {
+        if (!expandedVideo) return;
+        expandedVideo.pause();
+        expandedVideo.dataset.src = '';
+        expandedVideo.removeAttribute('src');
+        expandedVideo.load();
+        expandedVideo.style.display = 'none';
+        expandedCoverWrap?.classList.remove('video-mode');
+    }
+
+    function syncExpandedScrollState() {
+        if (!expandedOverlay || !expandedScroll) return;
+        expandedOverlay.classList.toggle('scrolled', expandedScroll.scrollTop > 24);
+    }
+
+    function syncExpandedVideoWithAudio(forceSeek = false) {
+        if (!expandedVideo || !currentTrack || currentTrack.type !== 'VIDEO') return;
+        if (!isExpandedPlayerVisible) {
+            expandedVideo.pause();
+            return;
+        }
+        const audioTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        if (forceSeek || Math.abs((expandedVideo.currentTime || 0) - audioTime) > 0.35) {
+            try { expandedVideo.currentTime = audioTime; } catch (e) { /* ignore */ }
+        }
+        if (audio.paused) {
+            expandedVideo.pause();
+        } else {
+            expandedVideo.play().catch(() => {});
+        }
+    }
+
+    function setExpandedBackdropImage(poster) {
+        if (!expandedOverlay) return;
+        if (poster && poster !== 'null') {
+            expandedOverlay.style.setProperty('--expanded-backdrop-image', `url('/stream/${poster}')`);
+            expandedOverlay.classList.add('has-backdrop');
+        } else {
+            expandedOverlay.style.removeProperty('--expanded-backdrop-image');
+            expandedOverlay.classList.remove('has-backdrop');
+        }
+    }
+
+    function updateExpandedPlayer(track) {
+        if (!expandedOverlay) return;
+        expandedContext && (expandedContext.textContent = getPlayingContextLabel());
+        if (!track) {
+            setExpandedBackdropImage('');
+            if (expandedTrackTitle) expandedTrackTitle.textContent = 'Chua co bai hat';
+            if (expandedTrackArtist) expandedTrackArtist.textContent = '-';
+            if (expandedLyricsPreview) expandedLyricsPreview.innerHTML = '<div class="player-expanded-empty">Hay phat mot bai hat de xem.</div>';
+            if (expandedCoverImg) expandedCoverImg.style.display = 'none';
+            if (expandedCoverIcon) expandedCoverIcon.style.display = 'flex';
+            clearExpandedVideo();
+            renderExpandedQueuePreview();
+            return;
+        }
+
+        if (expandedTrackTitle) expandedTrackTitle.textContent = track.title || 'Unknown title';
+        if (expandedTrackArtist) expandedTrackArtist.textContent = track.artist || 'Unknown artist';
+        if (expandedLyricsPreview) {
+            if (track.lyrics && track.lyrics.trim()) {
+                const preview = track.lyrics.split(/\r?\n/).slice(0, 10).join('\n');
+                expandedLyricsPreview.textContent = preview;
+            } else {
+                expandedLyricsPreview.innerHTML = '<div class="player-expanded-empty">Khong co loi bai hat.</div>';
+            }
+        }
+
+        setExpandedBackdropImage(track.poster || '');
+
+        if (track.type === 'VIDEO' && expandedVideo) {
+            if (expandedVideo.dataset.src !== track.src) {
+                expandedVideo.src = track.src;
+                expandedVideo.dataset.src = track.src || '';
+                expandedVideo.load();
+            }
+            expandedCoverWrap?.classList.add('video-mode');
+            expandedVideo.style.display = 'block';
+            if (expandedCoverImg) expandedCoverImg.style.display = 'none';
+            if (expandedCoverIcon) expandedCoverIcon.style.display = 'none';
+            syncExpandedVideoWithAudio(true);
+        } else {
+            clearExpandedVideo();
+            if (expandedCoverImg && expandedCoverIcon) {
+                if (track.poster && track.poster !== 'null') {
+                    expandedCoverImg.src = `/stream/${track.poster}`;
+                    expandedCoverImg.style.display = 'block';
+                    expandedCoverIcon.style.display = 'none';
+                } else {
+                    expandedCoverImg.style.display = 'none';
+                    expandedCoverIcon.style.display = 'flex';
+                    expandedCoverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                }
+            }
+        }
+
+        renderExpandedQueuePreview();
+    }
+
+    function openExpandedPlayer() {
+        if (!hasPlayableTrack()) {
+            showToast('Hay phat mot bai hat truoc!');
+            return;
+        }
+        if (!expandedOverlay) return;
+        closeLyricsOverlay();
+        closeMiniPlayer();
+        isExpandedPlayerVisible = true;
+        expandedOverlay.classList.add('visible');
+        expandedOverlay.setAttribute('aria-hidden', 'false');
+        if (expandedScroll) expandedScroll.scrollTop = 0;
+        syncExpandedScrollState();
+        btnPlayerExpand?.classList.add('btn-active');
+        rsBtnFullscreen?.classList.add('btn-active');
+        updateExpandedPlayer(currentTrack);
+    }
+
+    function closeExpandedPlayer() {
+        if (!expandedOverlay) return;
+        isExpandedPlayerVisible = false;
+        expandedOverlay.classList.remove('visible');
+        expandedOverlay.setAttribute('aria-hidden', 'true');
+        syncExpandedScrollState();
+        expandedVideo?.pause();
+        btnPlayerExpand?.classList.remove('btn-active');
+        rsBtnFullscreen?.classList.remove('btn-active');
+    }
+
+    function toggleExpandedPlayer() {
+        if (isExpandedPlayerVisible) closeExpandedPlayer();
+        else openExpandedPlayer();
+    }
+
+    function getMiniPopupMarkup() {
+        return `
+<!doctype html>
+<html lang="en">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>KangMusic Mini Player</title>
+    <style>
+        :root { color-scheme: dark; }
+        * { box-sizing: border-box; }
+        body {
+            margin: 0;
+            width: 100vw;
+            height: 100vh;
+            overflow: hidden;
+            font-family: "Segoe UI", sans-serif;
+            background: linear-gradient(180deg, #181818 0%, #101010 100%);
+            color: #fff;
+            display: flex;
+            flex-direction: column;
+        }
+        .mini-head {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: 10px 12px;
+            border-bottom: 1px solid rgba(255,255,255,0.12);
+            background: rgba(0,0,0,0.22);
+        }
+        .mini-label { font-size: 13px; font-weight: 700; letter-spacing: 0.03em; }
+        .mini-actions { display: flex; gap: 6px; }
+        .mini-icon-btn {
+            width: 30px;
+            height: 30px;
+            border: none;
+            border-radius: 8px;
+            cursor: pointer;
+            color: #d8d8d8;
+            background: transparent;
+            font-size: 15px;
+        }
+        .mini-icon-btn:hover { background: rgba(255,255,255,0.12); color: #fff; }
+        .mini-cover-wrap {
+            position: relative;
+            margin: 12px;
+            border-radius: 12px;
+            overflow: hidden;
+            flex: 1;
+            min-height: 210px;
+            background: linear-gradient(135deg, #2a2a2a 0%, #1f1f1f 100%);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .mini-cover-wrap img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+        .mini-video {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            background: #000;
+        }
+        .mini-cover-wrap.video-mode {
+            background: #000;
+        }
+        .mini-cover-icon {
+            font-size: 56px;
+            color: rgba(255,255,255,0.92);
+        }
+        .mini-play-btn {
+            position: absolute;
+            left: 50%;
+            top: 50%;
+            transform: translate(-50%, -50%);
+            width: 62px;
+            height: 62px;
+            border-radius: 999px;
+            border: none;
+            cursor: pointer;
+            background: #fff;
+            color: #000;
+            font-size: 24px;
+            font-weight: 700;
+        }
+        .mini-meta { padding: 0 12px 6px; }
+        .mini-title {
+            font-size: 28px;
+            font-weight: 800;
+            line-height: 1.2;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mini-artist {
+            margin-top: 4px;
+            color: #b3b3b3;
+            font-size: 14px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .mini-progress {
+            display: grid;
+            grid-template-columns: 34px 1fr 34px;
+            align-items: center;
+            gap: 8px;
+            padding: 8px 12px 12px;
+        }
+        .mini-time { font-size: 11px; color: #b3b3b3; text-align: center; }
+        .mini-seek {
+            width: 100%;
+            -webkit-appearance: none;
+            appearance: none;
+            height: 4px;
+            border-radius: 999px;
+            background: #5a5a5a;
+            outline: none;
+        }
+        .mini-seek::-webkit-slider-thumb {
+            -webkit-appearance: none;
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+        }
+        .mini-seek::-moz-range-thumb {
+            width: 10px;
+            height: 10px;
+            border-radius: 50%;
+            background: #fff;
+            border: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="mini-head">
+        <span class="mini-label">Mini player</span>
+        <div class="mini-actions">
+            <button type="button" class="mini-icon-btn" id="mini-popup-expand" title="Expand">&#x2932;</button>
+            <button type="button" class="mini-icon-btn" id="mini-popup-close" title="Close">&#x2715;</button>
+        </div>
+    </div>
+    <div class="mini-cover-wrap">
+        <video id="mini-popup-video" class="mini-video" playsinline muted preload="metadata" style="display:none;"></video>
+        <img id="mini-popup-cover-img" alt="Cover" style="display:none;">
+        <div id="mini-popup-cover-icon" class="mini-cover-icon">${AUDIO_ICON}</div>
+        <button type="button" class="mini-play-btn" id="mini-popup-play">${MINI_PLAY_ICON}</button>
+    </div>
+    <div class="mini-meta">
+        <div class="mini-title" id="mini-popup-title">No track</div>
+        <div class="mini-artist" id="mini-popup-artist">-</div>
+    </div>
+    <div class="mini-progress">
+        <span class="mini-time" id="mini-popup-current">0:00</span>
+        <input type="range" id="mini-popup-seek" class="mini-seek" min="0" max="100" step="0.1" value="0">
+        <span class="mini-time" id="mini-popup-total">0:00</span>
+    </div>
+</body>
+</html>`;
+    }
+
+    function hideInlineMiniPlayer() {
+        if (!miniWindow) return;
+        miniWindow.classList.remove('visible');
+        miniWindow.setAttribute('aria-hidden', 'true');
+    }
+
+    function showInlineMiniPlayer() {
+        if (!miniWindow) return;
+        miniWindow.classList.add('visible');
+        miniWindow.setAttribute('aria-hidden', 'false');
+    }
+
+    function clearMiniInlineVideo() {
+        if (!miniVideo) return;
+        miniVideo.pause();
+        miniVideo.dataset.src = '';
+        miniVideo.removeAttribute('src');
+        miniVideo.load();
+        miniVideo.style.display = 'none';
+        miniVideo.closest('.player-mini-cover-wrap')?.classList.remove('video-mode');
+    }
+
+    function syncMiniInlineVideoWithAudio(forceSeek = false) {
+        if (!miniVideo || !currentTrack || currentTrack.type !== 'VIDEO') return;
+        if (!isMiniPlayerVisible || !miniWindow?.classList.contains('visible')) {
+            miniVideo.pause();
+            return;
+        }
+        const audioTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        if (forceSeek || Math.abs((miniVideo.currentTime || 0) - audioTime) > 0.35) {
+            try { miniVideo.currentTime = audioTime; } catch (e) { /* ignore */ }
+        }
+        if (audio.paused) {
+            miniVideo.pause();
+        } else {
+            miniVideo.play().catch(() => {});
+        }
+    }
+
+    function clearMiniPopupVideo(dom) {
+        if (!dom?.video) return;
+        dom.video.pause();
+        dom.video.dataset.src = '';
+        dom.video.removeAttribute('src');
+        dom.video.load();
+        dom.video.style.display = 'none';
+        dom.coverWrap?.classList.remove('video-mode');
+    }
+
+    function syncMiniPopupVideoWithAudio(forceSeek = false) {
+        const dom = ensureMiniPopupDom();
+        if (!dom?.video || !currentTrack || currentTrack.type !== 'VIDEO') return;
+        if (!isMiniPlayerVisible || !miniPopup || miniPopup.closed) {
+            dom.video.pause();
+            return;
+        }
+        const audioTime = isFinite(audio.currentTime) ? audio.currentTime : 0;
+        if (forceSeek || Math.abs((dom.video.currentTime || 0) - audioTime) > 0.35) {
+            try { dom.video.currentTime = audioTime; } catch (e) { /* ignore */ }
+        }
+        if (audio.paused) {
+            dom.video.pause();
+        } else {
+            dom.video.play().catch(() => {});
+        }
+    }
+
+    function syncMiniVideoWithAudio(forceSeek = false) {
+        syncMiniInlineVideoWithAudio(forceSeek);
+        syncMiniPopupVideoWithAudio(forceSeek);
+    }
+
+    function ensureMiniPopupDom() {
+        if (!miniPopup || miniPopup.closed) {
+            miniPopup = null;
+            miniPopupDom = null;
+            return null;
+        }
+        if (miniPopupDom) return miniPopupDom;
+
+        const doc = miniPopup.document;
+        miniPopupDom = {
+            title: doc.getElementById('mini-popup-title'),
+            artist: doc.getElementById('mini-popup-artist'),
+            coverWrap: doc.querySelector('.mini-cover-wrap'),
+            video: doc.getElementById('mini-popup-video'),
+            coverImg: doc.getElementById('mini-popup-cover-img'),
+            coverIcon: doc.getElementById('mini-popup-cover-icon'),
+            btnPlay: doc.getElementById('mini-popup-play'),
+            btnClose: doc.getElementById('mini-popup-close'),
+            btnExpand: doc.getElementById('mini-popup-expand'),
+            seek: doc.getElementById('mini-popup-seek'),
+            currentTime: doc.getElementById('mini-popup-current'),
+            totalTime: doc.getElementById('mini-popup-total')
+        };
+
+        miniPopupDom.btnClose?.addEventListener('click', () => {
+            closeMiniPlayer();
+        });
+        miniPopupDom.btnExpand?.addEventListener('click', () => {
+            closeMiniPlayer();
+            openExpandedPlayer();
+        });
+        miniPopupDom.btnPlay?.addEventListener('click', () => {
+            if (!hasPlayableTrack()) return;
+            audio.paused ? audio.play() : audio.pause();
+        });
+        miniPopupDom.seek?.addEventListener('input', () => {
+            if (!isFinite(audio.duration)) return;
+            const t = audio.duration * parseFloat(miniPopupDom.seek.value) / 100;
+            if (miniPopupDom.currentTime) miniPopupDom.currentTime.textContent = fmt(t);
+        });
+        miniPopupDom.seek?.addEventListener('change', () => {
+            if (!isFinite(audio.duration)) return;
+            audio.currentTime = audio.duration * parseFloat(miniPopupDom.seek.value) / 100;
+            syncExpandedVideoWithAudio(true);
+            syncMiniVideoWithAudio(true);
+        });
+
+        if (!miniPopup.__kmBound) {
+            miniPopup.addEventListener('beforeunload', () => {
+                isMiniPlayerVisible = false;
+                btnPlayerMini?.classList.remove('btn-active');
+                miniPopup = null;
+                miniPopupDom = null;
+            });
+            miniPopup.__kmBound = true;
+        }
+
+        return miniPopupDom;
+    }
+
+    function ensureMiniPopupWindow() {
+        if (miniPopup && !miniPopup.closed) return miniPopup;
+        const popup = window.open('', 'kangmusic-mini-player', 'width=420,height=560,resizable=yes,scrollbars=no');
+        if (!popup) return null;
+        popup.document.open();
+        popup.document.write(getMiniPopupMarkup());
+        popup.document.close();
+        miniPopup = popup;
+        miniPopupDom = null;
+        ensureMiniPopupDom();
+        return popup;
+    }
+
+    function updateMiniPopup(track) {
+        const dom = ensureMiniPopupDom();
+        if (!dom) return;
+
+        if (!track) {
+            dom.title && (dom.title.textContent = 'No track');
+            dom.artist && (dom.artist.textContent = '-');
+            clearMiniPopupVideo(dom);
+            if (dom.coverImg) dom.coverImg.style.display = 'none';
+            if (dom.coverIcon) {
+                dom.coverIcon.style.display = 'flex';
+                dom.coverIcon.textContent = AUDIO_ICON;
+            }
+        } else {
+            dom.title && (dom.title.textContent = track.title || 'Unknown title');
+            dom.artist && (dom.artist.textContent = track.artist || 'Unknown artist');
+            if (track.type === 'VIDEO' && dom.video) {
+                if (dom.video.dataset.src !== track.src) {
+                    dom.video.src = track.src;
+                    dom.video.dataset.src = track.src || '';
+                    dom.video.load();
+                }
+                dom.coverWrap?.classList.add('video-mode');
+                dom.video.style.display = 'block';
+                if (dom.coverImg) dom.coverImg.style.display = 'none';
+                if (dom.coverIcon) dom.coverIcon.style.display = 'none';
+                syncMiniPopupVideoWithAudio(true);
+            } else if (dom.coverImg && dom.coverIcon) {
+                clearMiniPopupVideo(dom);
+                if (track.poster && track.poster !== 'null') {
+                    dom.coverImg.src = `/stream/${track.poster}`;
+                    dom.coverImg.style.display = 'block';
+                    dom.coverIcon.style.display = 'none';
+                } else {
+                    dom.coverImg.style.display = 'none';
+                    dom.coverIcon.style.display = 'flex';
+                    dom.coverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                }
+            }
+        }
+
+        if (dom.currentTime) dom.currentTime.textContent = fmt(audio.currentTime || 0);
+        if (dom.totalTime) dom.totalTime.textContent = fmt(audio.duration || 0);
+        if (dom.seek) {
+            dom.seek.value = (isFinite(audio.duration) && audio.duration > 0)
+                ? ((audio.currentTime / audio.duration) * 100)
+                : 0;
+        }
+    }
+
+    function syncMiniPlayButton() {
+        if (btnMiniPlay) {
+            btnMiniPlay.textContent = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
+        }
+        if (miniPopupDom?.btnPlay) {
+            miniPopupDom.btnPlay.textContent = audio.paused ? MINI_PLAY_ICON : MINI_PAUSE_ICON;
+        }
+    }
+
+    function updateMiniPlayer(track) {
+        updateMiniPopup(track);
+        if (!miniWindow) {
+            syncMiniPlayButton();
+            return;
+        }
+
+        if (!track) {
+            miniTrackTitle && (miniTrackTitle.textContent = 'Chua co bai hat');
+            miniTrackArtist && (miniTrackArtist.textContent = '-');
+            clearMiniInlineVideo();
+            if (miniCoverImg) miniCoverImg.style.display = 'none';
+            if (miniCoverIcon) miniCoverIcon.style.display = 'flex';
+        } else {
+            miniTrackTitle && (miniTrackTitle.textContent = track.title || 'Unknown title');
+            miniTrackArtist && (miniTrackArtist.textContent = track.artist || 'Unknown artist');
+            if (track.type === 'VIDEO' && miniVideo && miniWindow?.classList.contains('visible')) {
+                if (miniVideo.dataset.src !== track.src) {
+                    miniVideo.src = track.src;
+                    miniVideo.dataset.src = track.src || '';
+                    miniVideo.load();
+                }
+                miniVideo.closest('.player-mini-cover-wrap')?.classList.add('video-mode');
+                miniVideo.style.display = 'block';
+                if (miniCoverImg) miniCoverImg.style.display = 'none';
+                if (miniCoverIcon) miniCoverIcon.style.display = 'none';
+                syncMiniInlineVideoWithAudio(true);
+            } else if (miniCoverImg && miniCoverIcon) {
+                clearMiniInlineVideo();
+                if (track.poster && track.poster !== 'null') {
+                    miniCoverImg.src = `/stream/${track.poster}`;
+                    miniCoverImg.style.display = 'block';
+                    miniCoverIcon.style.display = 'none';
+                } else {
+                    miniCoverImg.style.display = 'none';
+                    miniCoverIcon.style.display = 'flex';
+                    miniCoverIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+                }
+            }
+        }
+
+        if (miniCurrentTime) miniCurrentTime.textContent = fmt(audio.currentTime || 0);
+        if (miniTotalTime) miniTotalTime.textContent = fmt(audio.duration || 0);
+        if (miniSeekBar) {
+            miniSeekBar.value = (isFinite(audio.duration) && audio.duration > 0)
+                ? ((audio.currentTime / audio.duration) * 100)
+                : 0;
+        }
+        syncMiniVideoWithAudio();
+        syncMiniPlayButton();
+    }
+
+    function openMiniPlayer() {
+        if (!hasPlayableTrack()) {
+            showToast('Hay phat mot bai hat truoc!');
+            return;
+        }
+
+        closeExpandedPlayer();
+        const popup = ensureMiniPopupWindow();
+        if (popup) {
+            hideInlineMiniPlayer();
+            isMiniPlayerVisible = true;
+            btnPlayerMini?.classList.add('btn-active');
+            updateMiniPlayer(currentTrack);
+            syncMiniVideoWithAudio(true);
+            popup.focus();
+            return;
+        }
+
+        if (!miniWindow) return;
+        isMiniPlayerVisible = true;
+        showInlineMiniPlayer();
+        btnPlayerMini?.classList.add('btn-active');
+        updateMiniPlayer(currentTrack);
+        syncMiniVideoWithAudio(true);
+        showToast('Popup bi chan. Dang mo mini player trong trang.');
+    }
+
+    function closeMiniPlayer() {
+        isMiniPlayerVisible = false;
+        btnPlayerMini?.classList.remove('btn-active');
+        hideInlineMiniPlayer();
+        clearMiniInlineVideo();
+        clearMiniPopupVideo(miniPopupDom);
+
+        const popupRef = miniPopup;
+        miniPopup = null;
+        miniPopupDom = null;
+        if (popupRef && !popupRef.closed) {
+            popupRef.close();
+        }
+    }
+
+    function toggleMiniPlayer() {
+        if (isMiniPlayerVisible) closeMiniPlayer();
+        else openMiniPlayer();
+    }
+
     function saveQueue() {
         try {
             localStorage.setItem('km_queue', JSON.stringify(queue));
@@ -74,8 +994,25 @@ document.addEventListener('DOMContentLoaded', () => {
         } catch (e) { /* quota exceeded — ignore */ }
     }
     function loadQueue() {
-        try { return JSON.parse(localStorage.getItem('km_queue') || '[]'); }
-        catch { return []; }
+        try {
+            const raw = JSON.parse(localStorage.getItem('km_queue') || '[]');
+            if (!Array.isArray(raw)) return [];
+            return raw
+                .filter(t => t && typeof t === 'object' && typeof t.src === 'string' && t.src.trim() !== '')
+                .map(t => ({
+                    id: t.id || '',
+                    title: t.title || 'Unknown title',
+                    artist: t.artist || 'Unknown artist',
+                    src: t.src,
+                    type: t.type === 'VIDEO' ? 'VIDEO' : 'AUDIO',
+                    genre: t.genre || '',
+                    emotion: t.emotion || '',
+                    lyrics: t.lyrics || '',
+                    poster: t.poster || ''
+                }));
+        } catch {
+            return [];
+        }
     }
     function loadQueueIndex() {
         const v = parseInt(localStorage.getItem('km_queue_index') || '0', 10);
@@ -109,7 +1046,7 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             posterImg.style.display = 'none';
             artworkIcon.style.display = 'flex';
-            artworkIcon.textContent = track.type === 'VIDEO' ? '🎬' : '🎵';
+            artworkIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
         }
 
         const infoLink = document.getElementById('player-info-link');
@@ -136,6 +1073,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cập nhật Right Sidebar — Now Playing view
         updateNowPlayingSidebar(track);
+        if (lyricsOverlay?.classList.contains('visible')) {
+            updateLyrics(track);
+        }
+        if (isExpandedPlayerVisible) {
+            updateExpandedPlayer(track);
+        }
+        if (isMiniPlayerVisible) {
+            updateMiniPlayer(track);
+        }
 
         renderQueuePanel();
         saveQueue();
@@ -165,7 +1111,7 @@ document.addEventListener('DOMContentLoaded', () => {
             rsGlow.style.opacity = '0.4';
             if (rsPoster) rsPoster.style.display = 'none';
             rsIcon.style.display = 'flex';
-            rsIcon.textContent = track.type === 'VIDEO' ? '🎬' : '🎵';
+            rsIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
         }
 
         // Update "đang phát từ" label
@@ -189,6 +1135,47 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast('Đã thêm vào danh sách chờ');
     }
 
+    async function playPlaylistFromLibrary(playlistId) {
+        if (!playlistId) return;
+        try {
+            const res = await fetch(`/api/playlists/${playlistId}/tracks`);
+            if (!res.ok) throw new Error("playlist_fetch_failed");
+            const data = await res.json();
+            if (!Array.isArray(data) || data.length === 0) {
+                showToast("Playlist chưa có bài hát để phát");
+                return;
+            }
+
+            const nextQueue = data
+                .map(t => ({
+                    id: t.id,
+                    title: t.title || "Unknown title",
+                    artist: t.artist || "Unknown artist",
+                    src: t.src,
+                    type: t.type || "AUDIO",
+                    genre: t.genre || "",
+                    emotion: t.emotion || "",
+                    lyrics: t.lyrics || "",
+                    poster: t.poster || ""
+                }))
+                .filter(t => !!t.src);
+
+            if (nextQueue.length === 0) {
+                showToast("Playlist chưa có bài hát để phát");
+                return;
+            }
+
+            queue = nextQueue;
+            queueIndex = 0;
+            saveQueue();
+            renderQueuePanel();
+            playTrack(queue[0]);
+            showToast("Đang phát playlist");
+        } catch (e) {
+            showToast("Không thể phát playlist này");
+        }
+    }
+
     // CODE-8 FIX: Only one km:addToQueue listener — the deduplicated one below (line ~656).
     // The duplicate without dedup check has been removed.
 
@@ -208,10 +1195,11 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Event delegation — play buttons ───────────────────────────────────
     document.body.addEventListener('click', e => {
-        const playBtn = e.target.closest('.media-play-btn');
+        const playBtn = e.target.closest('.media-play-btn, #btn-track-play');
         if (!playBtn) return;
 
         const track = trackFromBtn(playBtn);
+        if (!track.src) return;
 
         if (currentTrack && currentTrack.src === track.src) {
             audio.paused ? audio.play() : audio.pause();
@@ -257,9 +1245,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
         const href = item.dataset.href;
         if (href) {
-            if (window.htmx) {
-                window.htmx.ajax('GET', href, { target: '#main-content', pushUrl: true });
-            } else {
+            if (!navigateMainContent(href)) {
                 window.location.href = href;
             }
         }
@@ -267,12 +1253,63 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Nút "Thêm vào hàng chờ"
     document.body.addEventListener('click', e => {
-        const qBtn = e.target.closest('[data-action="queue"]');
+        const qBtn = e.target.closest('[data-action="queue"], #btn-track-queue');
         if (!qBtn) return;
         e.stopPropagation();
+
+        if (qBtn.id === 'btn-track-queue') {
+            document.body.dispatchEvent(new CustomEvent('km:addToQueue', {
+                detail: trackFromBtn(qBtn)
+            }));
+            return;
+        }
+
         const card = qBtn.closest('.media-card');
         const playBtn = card?.querySelector('.media-play-btn');
         if (playBtn) addToQueue(trackFromBtn(playBtn));
+    });
+
+    document.body.addEventListener("click", e => {
+        const pBtn = e.target.closest("[data-action=\"play-playlist\"]");
+        if (!pBtn) return;
+        e.preventDefault();
+        e.stopPropagation();
+        playPlaylistFromLibrary(pBtn.dataset.playlistId);
+    });
+
+    // NÃºt "PhÃ¡t táº¥t cáº£" á»Ÿ playlist/library
+    document.body.addEventListener('click', e => {
+        const playAllBtn = e.target.closest('#btn-play-all, #btn-play-liked');
+        if (!playAllBtn) return;
+        e.preventDefault();
+
+        const rows = document.querySelectorAll('.track-row');
+        if (!rows.length) return;
+
+        rows[0].querySelector('.track-play-btn.media-play-btn')?.click();
+        for (let i = 1; i < rows.length; i++) {
+            const btn = rows[i].querySelector('.track-play-btn.media-play-btn');
+            if (!btn) continue;
+            document.body.dispatchEvent(new CustomEvent('km:addToQueue', {
+                detail: trackFromBtn(btn)
+            }));
+        }
+    });
+
+    // Track details tabs
+    document.body.addEventListener('click', e => {
+        const tabBtn = e.target.closest('.track-tab-btn');
+        if (!tabBtn) return;
+
+        const tabsContainer = tabBtn.closest('.track-tabs-container');
+        if (!tabsContainer) return;
+
+        tabsContainer.querySelectorAll('.track-tab-btn').forEach(btn => btn.classList.remove('active'));
+        tabsContainer.querySelectorAll('.track-tab-content').forEach(tab => tab.classList.remove('active'));
+        tabBtn.classList.add('active');
+
+        const target = document.getElementById('tab-' + tabBtn.dataset.tab);
+        if (target) target.classList.add('active');
     });
 
     // ── Controls ───────────────────────────────────────────────────────────
@@ -294,14 +1331,29 @@ document.addEventListener('DOMContentLoaded', () => {
         showToast(shuffle ? 'Bật trộn bài' : 'Tắt trộn bài');
     });
 
+    function updateRepeatButtonUi() {
+        const labels = {
+            none: 'Lap: Tat',
+            one: 'Lap: 1 bai',
+            all: 'Lap: Tat ca'
+        };
+        btnRepeat.classList.toggle('btn-active', repeatMode !== 'none');
+        btnRepeat.dataset.mode = repeatMode;
+        btnRepeat.title = labels[repeatMode] || 'Lap lai';
+        btnRepeat.setAttribute('aria-label', labels[repeatMode] || 'Repeat');
+
+        const icon = btnRepeat.querySelector('svg');
+        if (icon) icon.style.opacity = repeatMode === 'none' ? '0.6' : '1';
+    }
+
+    updateRepeatButtonUi();
+
     btnRepeat.addEventListener('click', () => {
         const modes = ['none', 'one', 'all'];
         repeatMode = modes[(modes.indexOf(repeatMode) + 1) % modes.length];
         const labels = { none: 'Tắt lặp', one: 'Lặp 1 bài', all: 'Lặp playlist' };
-        btnRepeat.classList.toggle('btn-active', repeatMode !== 'none');
-        btnRepeat.dataset.mode = repeatMode;
+        updateRepeatButtonUi();
         showToast(labels[repeatMode]);
-        btnRepeat.querySelector('svg').style.opacity = repeatMode === 'none' ? '0.6' : '1';
     });
 
     // ── RIGHT SIDEBAR TAB NAVIGATION ─────────────────────────────────────
@@ -343,19 +1395,121 @@ document.addEventListener('DOMContentLoaded', () => {
         setSidebarView('queue');
     });
 
-    // Player bar lyrics button → goes to lyrics view
-    btnLyrics?.addEventListener('click', (e) => {
+    btnPlayerExpand?.addEventListener('click', (e) => {
         e.stopPropagation();
-        rightSidebar?.classList.remove('hidden', 'collapsed');
-        setSidebarView('lyrics');
+        toggleExpandedPlayer();
     });
 
-    // Player bar Now Playing (Đang phát) button
+    btnPlayerMini?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleMiniPlayer();
+    });
+
+    rsBtnFullscreen?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        toggleExpandedPlayer();
+    });
+
+    // Lyrics overlay helpers
+    function openLyricsOverlay() {
+        if (!lyricsOverlay) return;
+        if (!currentTrack) {
+            showToast('Hay phat mot bai hat truoc!');
+            return;
+        }
+        closeExpandedPlayer();
+        updateLyrics(currentTrack);
+        lyricsOverlay.classList.add('visible');
+    }
+
+    function closeLyricsOverlay() {
+        lyricsOverlay?.classList.remove('visible');
+    }
+
+    btnLyrics?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLyricsOverlay();
+    });
+
+    // Lyrics overlay close handlers
+    btnCloseLyricsOverlay?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeLyricsOverlay();
+    });
+
+    lyricsOverlay?.addEventListener('click', (e) => {
+        if (e.target === lyricsOverlay) {
+            closeLyricsOverlay();
+        }
+    });
+
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Escape') return;
+        if (lyricsOverlay?.classList.contains('visible')) {
+            closeLyricsOverlay();
+            return;
+        }
+        if (isExpandedPlayerVisible) {
+            closeExpandedPlayer();
+            return;
+        }
+        if (isMiniPlayerVisible) {
+            closeMiniPlayer();
+        }
+    });
+
+    // Player bar Now Playing button
     const btnNowPlaying = document.getElementById('btn-now-playing');
     btnNowPlaying?.addEventListener('click', (e) => {
         e.stopPropagation();
         rightSidebar?.classList.remove('hidden', 'collapsed');
         setSidebarView('playing');
+    });
+
+    btnExpandedClose?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeExpandedPlayer();
+    });
+
+    btnExpandedMini?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeExpandedPlayer();
+        openMiniPlayer();
+    });
+
+    expandedOverlay?.addEventListener('click', (e) => {
+        if (e.target === expandedOverlay) {
+            closeExpandedPlayer();
+        }
+    });
+    expandedScroll?.addEventListener('scroll', () => {
+        syncExpandedScrollState();
+    }, { passive: true });
+
+    expandedQueuePreview?.addEventListener('click', (e) => {
+        const row = e.target.closest('.player-expanded-queue-item');
+        if (!row) return;
+        const idx = parseInt(row.dataset.idx || '-1', 10);
+        if (Number.isInteger(idx) && idx >= 0) {
+            playAtIndex(idx);
+        }
+    });
+
+    btnMiniClose?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMiniPlayer();
+    });
+
+    btnMiniExpand?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeMiniPlayer();
+        openExpandedPlayer();
+    });
+
+    btnMiniPlay?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        if (!hasPlayableTrack()) return;
+        audio.paused ? audio.play() : audio.pause();
     });
 
     // Close button → hides sidebar completely
@@ -377,6 +1531,18 @@ document.addEventListener('DOMContentLoaded', () => {
         audio.volume = parseFloat(volumeSlider.value);
     });
 
+    miniSeekBar?.addEventListener('input', () => {
+        if (!isFinite(audio.duration)) return;
+        const t = audio.duration * parseFloat(miniSeekBar.value) / 100;
+        if (miniCurrentTime) miniCurrentTime.textContent = fmt(t);
+    });
+    miniSeekBar?.addEventListener('change', () => {
+        if (!isFinite(audio.duration)) return;
+        audio.currentTime = audio.duration * parseFloat(miniSeekBar.value) / 100;
+        syncExpandedVideoWithAudio(true);
+        syncMiniVideoWithAudio(true);
+    });
+
     // ── Seek bar ───────────────────────────────────────────────────────────
     seekBar.addEventListener('mousedown', () => { isDragging = true; });
     seekBar.addEventListener('touchstart', () => { isDragging = true; });
@@ -390,11 +1556,23 @@ document.addEventListener('DOMContentLoaded', () => {
             audio.currentTime = audio.duration * seekBar.value / 100;
         }
         isDragging = false;
+        syncExpandedVideoWithAudio(true);
+        syncMiniVideoWithAudio(true);
     });
 
     // ── Audio events ───────────────────────────────────────────────────────
-    audio.addEventListener('play',  () => { btnPlay.innerHTML = PAUSE_SVG; });
-    audio.addEventListener('pause', () => { btnPlay.innerHTML = PLAY_SVG; });
+    audio.addEventListener('play',  () => {
+        btnPlay.innerHTML = PAUSE_SVG;
+        syncMiniPlayButton();
+        syncExpandedVideoWithAudio(true);
+        syncMiniVideoWithAudio(true);
+    });
+    audio.addEventListener('pause', () => {
+        btnPlay.innerHTML = PLAY_SVG;
+        syncMiniPlayButton();
+        syncExpandedVideoWithAudio();
+        syncMiniVideoWithAudio();
+    });
 
     audio.addEventListener('timeupdate', () => {
         if (isDragging || !isFinite(audio.duration)) return;
@@ -402,6 +1580,11 @@ document.addEventListener('DOMContentLoaded', () => {
         seekBar.value = pct;
         currentTimeEl.textContent = fmt(audio.currentTime);
         totalTimeEl.textContent   = fmt(audio.duration);
+        if (isMiniPlayerVisible) {
+            updateMiniPlayer(currentTrack);
+        }
+        syncExpandedVideoWithAudio();
+        syncMiniVideoWithAudio();
         
         // Save current time to restore if page reloads
         try {
@@ -413,6 +1596,11 @@ document.addEventListener('DOMContentLoaded', () => {
     audio.addEventListener('loadedmetadata', () => {
         totalTimeEl.textContent = fmt(audio.duration);
         seekBar.value = 0;
+        if (isMiniPlayerVisible) {
+            updateMiniPlayer(currentTrack);
+        }
+        syncExpandedVideoWithAudio(true);
+        syncMiniVideoWithAudio(true);
     });
 
     audio.addEventListener('ended', () => playNext());
@@ -487,15 +1675,16 @@ document.addEventListener('DOMContentLoaded', () => {
     function createQueueItem(track, idx, isNow) {
         const item = document.createElement('div');
         item.className = isNow ? 'queue-now-track' : 'queue-item';
-        const emoji = track.type === 'VIDEO' ? '🎬' : '🎵';
-        const thumbHTML = track.poster 
-            ? `<img src="/stream/${track.poster}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">` 
+        const safeTrack = track && typeof track === 'object' ? track : {};
+        const emoji = safeTrack.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
+        const thumbHTML = safeTrack.poster 
+            ? `<img src="/stream/${safeTrack.poster}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">` 
             : `<span>${emoji}</span>`;
         item.innerHTML = `
             <div class="queue-item-thumb" style="display:flex; justify-content:center; align-items:center; overflow:hidden;">${thumbHTML}</div>
             <div class="queue-item-info">
-                <div class="queue-item-title">${escHtml(track.title)}</div>
-                <div class="queue-item-artist">${escHtml(track.artist)}</div>
+                <div class="queue-item-title">${escHtml(safeTrack.title || 'Unknown title')}</div>
+                <div class="queue-item-artist">${escHtml(safeTrack.artist || 'Unknown artist')}</div>
             </div>
             <button class="queue-item-more" title="Tùy chọn">···</button>
             ${isNow ? '' : `<button class="queue-item-remove" data-idx="${idx}" title="Xóa">✕</button>`}
@@ -521,13 +1710,33 @@ document.addEventListener('DOMContentLoaded', () => {
         const queueList   = document.getElementById('queue-list-sidebar');
         const emptyState  = document.getElementById('queue-empty-state');
 
-        if (!nowSection || !nextSection || !queueList || !emptyState) return;
+        if (!nowSection || !nowItem || !nextSection || !queueList || !emptyState) {
+            return;
+        }
+
+        // Guard against stale/corrupted queue state (e.g. saved index out of range).
+        if (!Array.isArray(queue)) queue = [];
+        const beforeLen = queue.length;
+        queue = queue.filter(t => t && typeof t === 'object' && typeof t.src === 'string' && t.src.trim() !== '');
+        if (queue.length !== beforeLen) {
+            saveQueue();
+        }
+        if (!Number.isInteger(queueIndex)) {
+            const parsed = parseInt(queueIndex, 10);
+            queueIndex = Number.isNaN(parsed) ? 0 : parsed;
+        }
 
         if (queue.length === 0) {
+            queueIndex = 0;
             nowSection.style.display  = 'none';
             nextSection.style.display = 'none';
             emptyState.style.display  = 'block';
             return;
+        }
+
+        if (queueIndex < 0 || queueIndex >= queue.length) {
+            queueIndex = 0;
+            saveQueue();
         }
 
         emptyState.style.display = 'none';
@@ -552,16 +1761,26 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             nextSection.style.display = 'none';
         }
+
+        // Final safety: never leave queue view fully blank.
+        if (nowSection.style.display === 'none' && nextSection.style.display === 'none') {
+            emptyState.style.display = 'block';
+        }
+        if (isExpandedPlayerVisible) {
+            updateExpandedPlayer(currentTrack);
+        }
     }
 
     // ── Lyrics update ──────────────────────────────────────────────────────
     function updateLyrics(track) {
-        const el = document.getElementById('lyrics-content-sidebar');
-        if (!el) return;
+        if (!lyricsOverlayContent) return;
+        if (lyricsOverlayTitle) {
+            lyricsOverlayTitle.textContent = track?.title ? `Lyrics - ${track.title}` : 'Lyrics';
+        }
         if (track.lyrics && track.lyrics.trim()) {
-            el.textContent = track.lyrics;
+            lyricsOverlayContent.textContent = track.lyrics;
         } else {
-            el.innerHTML = '<div style="color:#b3b3b3; text-align:center; padding:40px 0; font-size:14px;">Không có lời bài hát</div>';
+            lyricsOverlayContent.innerHTML = '<div class="lyrics-overlay-empty">Kh&#244;ng c&#243; l&#7901;i b&#224;i h&#225;t</div>';
         }
     }
 
@@ -601,7 +1820,7 @@ document.addEventListener('DOMContentLoaded', () => {
             } else {
                 if (posterImg) posterImg.style.display = 'none';
                 artworkIcon.style.display = 'flex';
-                artworkIcon.textContent = track.type === 'VIDEO' ? '🎬' : '🎵';
+                artworkIcon.textContent = track.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
             }
             
             const infoLink = document.getElementById('player-info-link');
@@ -632,17 +1851,68 @@ document.addEventListener('DOMContentLoaded', () => {
 
     restoreQueueState();
     renderQueuePanel();
+    updateExpandedPlayer(currentTrack);
+    updateMiniPlayer(currentTrack);
 
     // ── Scroll listeners ───────────────────────────────────────────────────
-    const contentArea   = document.querySelector('.content-area');
-    const contentHeader = document.querySelector('.content-header');
-    if (contentArea && contentHeader) {
-        contentArea.addEventListener('scroll', () => {
-            contentHeader.classList.toggle('header-scrolled', contentArea.scrollTop > 20);
-        }, { passive: true });
+    function initContentAreaScroll() {
+        const contentArea = document.querySelector('.content-area');
+        if (!contentArea) return;
+        if (contentArea.dataset.kmScrollInit === '1') return;
+
+        const updateHeaderState = () => {
+            const contentHeader = contentArea.querySelector('.content-header');
+            if (contentHeader) {
+                contentHeader.classList.toggle('header-scrolled', contentArea.scrollTop > 20);
+            }
+        };
+
+        contentArea.addEventListener('scroll', updateHeaderState, { passive: true });
+        contentArea.dataset.kmScrollInit = '1';
+        updateHeaderState();
     }
 
+    initContentAreaScroll();
+
     // ── Like button trong player bar ──────────────────────────────────────
+    document.body.addEventListener('click', async e => {
+        const trackLikeBtn = e.target.closest('#btn-track-like');
+        if (!trackLikeBtn) return;
+        e.preventDefault();
+
+        const mediaId = trackLikeBtn.dataset.id;
+        if (!mediaId) return;
+        if (trackLikeBtn.dataset.loading === 'true') return;
+        trackLikeBtn.dataset.loading = 'true';
+
+        try {
+            const fd = new URLSearchParams();
+            fd.append('mediaItemId', mediaId);
+            const res = await fetch('/api/library/toggle', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-XSRF-TOKEN': getCsrfToken()
+                },
+                body: fd
+            });
+            if (res.status === 401) { showToast('Hay dang nhap de yeu thich!'); return; }
+            if (!res.ok) { showToast('Da co loi xay ra'); return; }
+
+            const data = await res.json();
+            trackLikeBtn.classList.toggle('liked', data.liked);
+            if (currentTrack && String(currentTrack.id) === String(mediaId)) {
+                btnLike?.classList.toggle('liked', data.liked);
+                document.getElementById('rs-btn-like')?.classList.toggle('liked', data.liked);
+            }
+            showToast(data.message || 'Da cap nhat yeu thich');
+        } catch {
+            showToast('Khong the ket noi server');
+        } finally {
+            trackLikeBtn.removeAttribute('data-loading');
+        }
+    });
+
     btnLike?.addEventListener('click', async () => {
         if (!currentTrack?.id) {
             showToast('Hãy phát một bài hát trước!');
@@ -891,7 +2161,9 @@ document.addEventListener('DOMContentLoaded', () => {
         fetch('/playlists/folder/create', { method: 'POST', body: params, headers })
             .then(res => {
                 if (res.redirected) {
-                    window.location.href = res.url;
+                    if (!navigateMainContent(res.url)) {
+                        window.location.href = res.url;
+                    }
                 } else {
                     window.location.reload();
                 }

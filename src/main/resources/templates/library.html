@@ -1,4 +1,4 @@
-<!DOCTYPE html>
+﻿<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Bài hát đã thích - KangMusic')}"></head>
 <body>
@@ -6,14 +6,10 @@
     <div th:replace="~{fragments :: top-bar}"></div>
     <div class="main-layout">
         <div th:replace="~{fragments :: library-sidebar}"></div>
-        <main class="content-area" id="main-content" th:fragment="main-content">
+        <main class="content-area" id="main-content" th:fragment="main-content" th:with="pageTitle='Thư viện - KangMusic'">
 
             <div class="content-header">
-                <div class="content-nav-btns">
-                    <button class="content-nav-btn" onclick="history.back()">
-                        <svg width="24" height="24" viewBox="0 0 24 24" fill="currentColor"><path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/></svg>
-                    </button>
-                </div>
+                <h2 class="page-title" th:text="${pageTitle}">Thư viện - KangMusic</h2>
             </div>
 
             <!-- Liked Songs Hero Header -->
@@ -131,27 +127,6 @@
     <div th:replace="~{fragments :: global-player}"></div>
 </div>
 
-<script>
-// Phát tất cả bài trong liked songs
-document.getElementById('btn-play-liked')?.addEventListener('click', function() {
-    const rows = document.querySelectorAll('.track-row');
-    if (!rows.length) return;
-    rows[0].querySelector('.track-play-btn')?.click();
-    for (let i = 1; i < rows.length; i++) {
-        const btn = rows[i].querySelector('.track-play-btn');
-        if (btn) {
-            const track = {
-                id: btn.dataset.id, title: btn.dataset.title,
-                artist: btn.dataset.artist, src: btn.dataset.src,
-                type: btn.dataset.type || 'AUDIO',
-                genre: btn.dataset.genre || '', emotion: btn.dataset.emotion || '',
-                lyrics: btn.dataset.lyrics || '',
-                poster: btn.dataset.poster || ''
-            };
-            document.body.dispatchEvent(new CustomEvent('km:addToQueue', { detail: track }));
-        }
-    }
-});
-</script>
 </body>
 </html>
+
