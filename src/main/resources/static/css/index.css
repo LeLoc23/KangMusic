@@ -558,18 +558,19 @@
 
 .add-btn {
   display: inline-flex; align-items: center; gap: 8px;
-  background: var(--sp-green); color: #000;
-  font-weight: 700; font-size: 13px; padding: 8px 20px;
+  background: var(--sp-white); color: #000;
+  font-weight: 700; font-size: 14px; padding: 8px 18px 10px;
   border-radius: var(--radius-full); transition: var(--transition);
+  letter-spacing: -0.1px;
 }
-.add-btn:hover { background: var(--sp-green-hover); transform: scale(1.04); }
+.add-btn:hover { background: #f0f0f0; transform: scale(1.04); }
 
 /* PAGE CONTENT */
 .content-body { padding: 24px 32px; }
-.page-greeting { font-size: 28px; font-weight: 900; margin-bottom: 24px; letter-spacing: -0.5px; }
+.page-greeting { font-size: 38px; font-weight: 700; margin-bottom: 24px; letter-spacing: -1.72px; } /* Figma display text tracking */
 
 .section-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 20px; margin-top: 32px; }
-.section-title { font-size: 22px; font-weight: 800; letter-spacing: -0.3px; }
+.section-title { font-size: 26px; font-weight: 700; letter-spacing: -0.96px; }
 .pagination-info { font-size: 13px; color: var(--sp-text-muted); }
 
 /* ── Search Bar ──────────────────────────────────────────────────── */
@@ -673,7 +674,7 @@
 .search-top-sub { font-size: 13px; color: #b3b3b3; }
 .search-top-sub-dot { margin: 0 6px; opacity: 0.7; }
 .search-play-btn {
-  background: #1db954;
+  background: var(--sp-white);
   color: #000;
   border: none;
   border-radius: 50%;
@@ -682,7 +683,7 @@
   cursor: pointer;
   transition: transform 0.1s, box-shadow 0.1s;
 }
-.search-play-btn:hover { transform: scale(1.05); box-shadow: 0 10px 24px rgba(0,0,0,0.3); }
+.search-play-btn:hover { transform: scale(1.05); box-shadow: 0 10px 24px rgba(255,255,255,0.2); }
 
 .search-track-list {
   display: flex;
@@ -769,16 +770,18 @@
 .search-playlist-play {
   position: absolute;
   bottom: 10px; right: 10px;
-  background: #1db954;
+  background: var(--sp-white);
   color: #000;
   border: none;
   width: 44px; height: 44px;
   border-radius: 50%;
   display: flex; align-items: center; justify-content: center;
-  box-shadow: 0 10px 24px rgba(0,0,0,0.35);
+  box-shadow: 0 10px 24px rgba(0,0,0,0.5);
   cursor: pointer;
   z-index: 2;
+  transition: transform 0.2s;
 }
+.search-playlist-play:hover { transform: scale(1.05); }
 .search-playlist-title { font-weight: 700; font-size: 15px; color: #fff; margin-bottom: 2px; }
 .search-playlist-title a {
   color: inherit;
@@ -817,7 +820,7 @@
 .media-card-artwork {
   position: relative; margin-bottom: 14px;
   aspect-ratio: 1;
-  background: linear-gradient(135deg, #1db954 0%, #0d7a38 100%);
+  background: linear-gradient(135deg, #1ed760 0%, #0d7a38 100%);
   border-radius: 6px; overflow: hidden;
   box-shadow: 0 8px 24px rgba(0,0,0,0.5);
   display: flex; align-items: center; justify-content: center;
@@ -829,7 +832,7 @@
   padding: 3px 8px; border-radius: var(--radius-full);
   z-index: 2; pointer-events: none;
 }
-.badge-audio { background: #1db954; color: #000; }
+.badge-audio { background: #1ed760; color: #000; }
 .badge-video { background: #e91429; color: #fff; }
 
 .media-card-link-overlay {

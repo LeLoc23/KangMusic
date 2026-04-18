@@ -48,7 +48,7 @@ body.auth-page {
   text-align: center;
 }
 .auth-alert-error { background: rgba(229,9,20,0.15); color: #ff6b6b; border: 1px solid rgba(229,9,20,0.3); }
-.auth-alert-success { background: rgba(29,185,84,0.15); color: var(--sp-green); border: 1px solid rgba(29,185,84,0.3); }
+.auth-alert-success { background: rgba(255,255,255,0.15); color: var(--sp-white); border: 1px solid rgba(255,255,255,0.3); }
 .auth-alert-info { background: rgba(52,152,219,0.15); color: #74b9ff; border: 1px solid rgba(52,152,219,0.3); }
 
 .auth-container form { display: flex; flex-direction: column; gap: 0; }
@@ -95,7 +95,7 @@ body.auth-page {
 .auth-container button[type="submit"] {
   width: 100%;
   padding: 16px;
-  background: var(--sp-green);
+  background: var(--sp-white);
   color: #000;
   font-weight: 900;
   font-size: 15px;
@@ -108,7 +108,7 @@ body.auth-page {
   text-transform: uppercase;
 }
 .auth-container button[type="submit"]:hover {
-  background: var(--sp-green-hover);
+  background: var(--sp-white);
   transform: scale(1.02);
 }
 
@@ -133,7 +133,7 @@ body.auth-page {
   text-decoration: underline;
   transition: var(--transition);
 }
-.auth-links a:hover { color: var(--sp-green); }
+.auth-links a:hover { color: var(--sp-white); }
 
 /* Profile info box */
 .profile-info-box {
@@ -154,7 +154,7 @@ body.auth-page {
 
 .section-subtitle {
   font-size: 16px; font-weight: 700;
-  color: var(--sp-green);
+  color: var(--sp-white);
   padding-bottom: 12px;
   border-bottom: 1px solid var(--sp-border);
   margin-bottom: 20px;
