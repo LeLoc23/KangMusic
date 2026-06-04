@@ -10,17 +10,12 @@ import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 
-import java.security.SecureRandom;
-import java.util.*;
-import java.util.stream.Collectors;
-
 @Controller
 public class AuthController {
 
     private final AuthService authService;
     private final com.musicapp.services.CustomUserDetailsService userDetailsService;
     private final ImageCaptchaService imageCaptchaService;
-    private final SecureRandom random = new SecureRandom();
 
     public AuthController(AuthService authService,
                           com.musicapp.services.CustomUserDetailsService userDetailsService,
@@ -31,7 +26,8 @@ public class AuthController {
     }
 
     @GetMapping("/login")
-    public String loginPage() {
+    public String loginPage(Model model, HttpSession session) {
+        addCaptcha(model, session);
         return "login";
     }
 
@@ -74,33 +70,23 @@ public class AuthController {
 
     @GetMapping("/forgot-password")
     public String forgotPasswordPage(Model model, HttpSession session) {
-        addImageCaptcha(model, session);
+        addCaptcha(model, session);
         return "forgot-password";
     }
 
     @PostMapping("/forgot-password")
     public String processForgotPassword(@RequestParam String email,
-                                        @RequestParam(required = false) List<String> selectedImages,
+                                        @RequestParam(required = false, defaultValue = "") String captchaCode,
                                         Model model,
                                         HttpSession session) {
-        // Validate image CAPTCHA
-        @SuppressWarnings("unchecked")
-        Set<Integer> correctIndices = (Set<Integer>) session.getAttribute("captchaCorrectIndices");
-        
-        Set<Integer> userSelections = new HashSet<>();
-        if (selectedImages != null) {
-            for (String idx : selectedImages) {
-                try {
-                    userSelections.add(Integer.parseInt(idx));
-                } catch (NumberFormatException ignored) {}
-            }
-        }
+        String expectedCode = (String) session.getAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
 
-        if (!imageCaptchaService.verify(userSelections, correctIndices)) {
-            model.addAttribute("error", "Xác thực hình ảnh không đúng. Vui lòng chọn lại tất cả hình ảnh phù hợp.");
-            addImageCaptcha(model, session);
+        if (!imageCaptchaService.verify(captchaCode, expectedCode)) {
+            model.addAttribute("error", "Mã xác minh không đúng. Vui lòng nhập lại.");
+            addCaptcha(model, session);
             return "forgot-password";
         }
+        session.removeAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
 
         authService.processForgotPassword(email);
         session.setAttribute("resetEmail", email);
@@ -168,10 +154,9 @@ public class AuthController {
         };
     }
 
-    private void addImageCaptcha(Model model, HttpSession session) {
+    private void addCaptcha(Model model, HttpSession session) {
         ImageCaptchaService.CaptchaData captcha = imageCaptchaService.generateCaptcha();
-        session.setAttribute("captchaCorrectIndices", captcha.getCorrectIndices());
-        model.addAttribute("captchaImages", captcha.getImages());
-        model.addAttribute("captchaTarget", captcha.getTargetCategory());
+        session.setAttribute(ImageCaptchaService.SESSION_ATTRIBUTE, captcha.code());
+        model.addAttribute("captchaImage", captcha.imageDataUri());
     }
 }

@@ -5,7 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Đăng Nhập - KangMusic</title>
     <link rel="stylesheet" th:href="@{/css/common.css(v=2)}">
-    <link rel="stylesheet" th:href="@{/css/auth.css}">
+    <link rel="stylesheet" th:href="@{/css/auth.css(v=2)}">
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0">
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
     <script defer th:src="@{/js/app.js}"></script>
@@ -29,6 +29,10 @@
             Tên đăng nhập hoặc mật khẩu không chính xác! Nếu tài khoản bị khóa, vui lòng liên hệ Admin.
         </div>
 
+        <div th:if="${param.captchaError}" class="auth-alert auth-alert-error">
+            Mã xác minh không đúng. Vui lòng nhập lại.
+        </div>
+
         <div th:if="${param.success}" class="auth-alert auth-alert-success">
             Đăng nhập thành công! Nếu được chuyển hướng đến đây sau khi đăng ký/khôi phục, vui lòng đăng nhập lại.
         </div>
@@ -46,6 +50,21 @@
             <div class="form-group">
                 <label>Mật khẩu / Password</label>
                 <input type="password" name="password" required placeholder="Nhập mật khẩu...">
+            </div>
+
+            <div class="form-group captcha-form-group">
+                <div class="captcha-field">
+                    <span class="km-symbol captcha-icon" aria-hidden="true">verified_user</span>
+                    <input type="text"
+                           name="captchaCode"
+                           required
+                           maxlength="6"
+                           inputmode="numeric"
+                           autocomplete="off"
+                           placeholder="Mã xác minh"
+                           aria-label="Mã xác minh">
+                    <img class="captcha-image" th:src="${captchaImage}" alt="Mã xác minh" draggable="false">
+                </div>
             </div>
 
             <div class="forgot-link-row">

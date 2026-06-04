@@ -85,6 +85,67 @@ body.auth-page {
 }
 .auth-container input::placeholder { color: var(--sp-text-dim); }
 
+.captcha-form-group {
+  margin-bottom: 16px;
+}
+
+.captcha-field {
+  display: flex;
+  align-items: center;
+  min-height: 54px;
+  background: var(--sp-surface);
+  border-bottom: 1px solid rgba(255,255,255,0.42);
+  transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+.captcha-field:focus-within {
+  border-bottom-color: var(--sp-white);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.75);
+}
+
+.captcha-icon {
+  width: 52px;
+  min-width: 52px;
+  height: 52px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #003f91;
+  font-size: 31px;
+}
+
+.auth-container .captcha-field input[type="text"],
+.auth-container .captcha-field input[type="text"]:focus-visible {
+  flex: 1;
+  min-width: 0;
+  height: 52px;
+  padding: 0 8px 0 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  box-shadow: none;
+  color: var(--sp-white);
+  font-size: 20px;
+  font-weight: 700;
+}
+
+.captcha-image {
+  width: 0;
+  height: 44px;
+  opacity: 0;
+  object-fit: cover;
+  border-radius: 3px;
+  transform: translateX(8px);
+  transition: width 0.18s ease, opacity 0.18s ease, transform 0.18s ease;
+  pointer-events: none;
+}
+
+.captcha-field:focus-within .captcha-image {
+  width: 106px;
+  opacity: 1;
+  transform: translateX(0);
+}
+
 .forgot-link-row {
   text-align: right; margin-bottom: 8px; margin-top: -8px;
 }

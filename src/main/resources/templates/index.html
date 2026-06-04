@@ -901,17 +901,23 @@
                     const loadingBubble = appendMessage('assistant', '<span style="color: #b3b3b3;">Đang quét thư viện và phân tích yêu cầu...</span>', true);
 
                     try {
-                        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+                        const csrfHeaders = typeof getCsrfHeaders === 'function'
+                            ? getCsrfHeaders()
+                            : { 'X-XSRF-TOKEN': (typeof getCsrfToken === 'function' ? getCsrfToken() : '') };
                         const response = await fetch('/api/ai/recommend', {
                             method: 'POST',
                             headers: {
                                 'Content-Type': 'application/x-www-form-urlencoded',
-                                'X-XSRF-TOKEN': csrfToken
+                                ...csrfHeaders
                             },
                             body: new URLSearchParams({ query: queryText })
                         });
 
-                        if (!response.ok) throw new Error('API request failed');
+                        if (!response.ok) throw new Error(`AI recommendation request failed (${response.status})`);
+                        const contentType = response.headers.get('content-type') || '';
+                        if (!contentType.includes('application/json')) {
+                            throw new Error('AI recommendation returned a non-JSON response');
+                        }
                         const data = await response.json();
                         loadingBubble.remove();
 

@@ -5,12 +5,25 @@
  */
 
 /**
- * CRIT-2 FIX: Reads the XSRF-TOKEN cookie set by Spring Security's
- * CookieCsrfTokenRepository so fetch() POST calls can include it.
+ * Reads the CSRF token exposed by Spring Security. Prefer the server-rendered
+ * meta tag because it is refreshed on redirects after login; fall back to the
+ * XSRF-TOKEN cookie for pages without the shared head fragment.
  */
 function getCsrfToken() {
+    const metaToken = document.querySelector('meta[name="_csrf"]')?.getAttribute('content');
+    if (metaToken) return metaToken;
+
     const match = document.cookie.split('; ').find(c => c.startsWith('XSRF-TOKEN='));
     return match ? decodeURIComponent(match.split('=')[1]) : '';
+}
+
+function getCsrfHeaderName() {
+    return document.querySelector('meta[name="_csrf_header"]')?.getAttribute('content') || 'X-XSRF-TOKEN';
+}
+
+function getCsrfHeaders() {
+    const token = getCsrfToken();
+    return token ? { [getCsrfHeaderName()]: token } : {};
 }
 
 const LEGACY_PATH_ICON_MAP = Object.freeze({

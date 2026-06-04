@@ -1,5 +1,6 @@
 package com.musicapp.config;
 
+import com.musicapp.services.ImageCaptchaService;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
@@ -8,6 +9,7 @@ import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.security.web.SecurityFilterChain;
 import org.springframework.security.web.authentication.AuthenticationSuccessHandler;
+import org.springframework.security.web.authentication.UsernamePasswordAuthenticationFilter;
 import org.springframework.security.web.csrf.CookieCsrfTokenRepository;
 import org.springframework.security.web.csrf.CsrfTokenRequestAttributeHandler;
 
@@ -29,7 +31,7 @@ public class SecurityConfig {
     }
 
     @Bean
-    public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
+    public SecurityFilterChain filterChain(HttpSecurity http, ImageCaptchaService imageCaptchaService) throws Exception {
         http
             // CRIT-2 FIX: Use cookie-based CSRF — JS reads XSRF-TOKEN cookie and sends
             // as X-XSRF-TOKEN header on every state-changing fetch() POST call.
@@ -48,7 +50,7 @@ public class SecurityConfig {
                 .requestMatchers("/", "/login", "/register", "/forgot-password",
                         "/reset-password", "/css/**", "/js/**", "/media/**",
                         "/stream/**", "/api/search", "/api/genre/**", "/api/similar/**",
-                        "/api/ai/chat/**", "/api/comments/**", "/track/**").permitAll()
+                        "/api/ai/chat/**", "/api/ai/recommend", "/api/comments/**", "/track/**").permitAll()
                 .requestMatchers("/admin/**").hasAuthority("ROLE_ADMIN")
                 .requestMatchers("/creator", "/add", "/media/*/edit").authenticated()
                 .requestMatchers("/playlists/**", "/library").authenticated()
@@ -60,6 +62,7 @@ public class SecurityConfig {
                 .successHandler(customSuccessHandler())
                 .permitAll()
             )
+            .addFilterBefore(new LoginCaptchaFilter(imageCaptchaService), UsernamePasswordAuthenticationFilter.class)
             .logout(logout -> logout
                 .logoutSuccessUrl("/")
                 .permitAll()
