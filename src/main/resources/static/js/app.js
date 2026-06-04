@@ -633,6 +633,7 @@ document.addEventListener('DOMContentLoaded', () => {
     let repeatMode  = 'none';        // 'none' | 'one' | 'all'
     let isDragging  = false;
     let currentTrack = null;
+    let currentLyricsSegments = [];
     let isExpandedPlayerVisible = false;
     let isMiniPlayerVisible = false;
     let miniPopup = null;
@@ -743,11 +744,12 @@ document.addEventListener('DOMContentLoaded', () => {
         if (expandedTrackTitle) expandedTrackTitle.textContent = track.title || 'Unknown title';
         if (expandedTrackArtist) expandedTrackArtist.textContent = track.artist || 'Unknown artist';
         if (expandedLyricsPreview) {
-            if (track.lyrics && track.lyrics.trim()) {
-                const preview = track.lyrics.split(/\r?\n/).slice(0, 10).join('\n');
-                expandedLyricsPreview.textContent = preview;
+            if (currentLyricsSegments && currentLyricsSegments.length > 0) {
+                renderSyncedLyrics();
+            } else if (track.lyrics && track.lyrics.trim()) {
+                renderFallbackLyrics();
             } else {
-                expandedLyricsPreview.innerHTML = '<div class="player-expanded-empty">Khong co loi bai hat.</div>';
+                expandedLyricsPreview.innerHTML = '<div class="player-expanded-empty">Không có lời bài hát.</div>';
             }
         }
 
@@ -1396,9 +1398,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
         // Cập nhật Right Sidebar — Now Playing view
         updateNowPlayingSidebar(track);
-        if (lyricsOverlay?.classList.contains('visible')) {
-            updateLyrics(track);
-        }
+        
+        // Fetch and load synced lyrics
+        fetchAndLoadLyrics(track.id);
+
         if (isExpandedPlayerVisible) {
             updateExpandedPlayer(track);
         }
@@ -1684,7 +1687,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!rightSidebar) return;
 
         // Remove old view classes
-        rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics');
+        rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
         rightSidebar.classList.add('view-' + view);
 
         // Update tab active states
@@ -1839,6 +1842,10 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnCloseSidebar = document.getElementById('btn-close-right-sidebar');
     btnCloseSidebar?.addEventListener('click', (e) => {
         e.stopPropagation();
+        // If currently in AI chat, switch back to playing view
+        if (rightSidebar?.classList.contains('view-ai-chat')) {
+            setSidebarView('playing');
+        }
         rightSidebar?.classList.add('collapsed');
     });
 
@@ -1908,6 +1915,9 @@ document.addEventListener('DOMContentLoaded', () => {
         }
         syncExpandedVideoWithAudio();
         syncMiniVideoWithAudio();
+        
+        // Update active lyrics highlight
+        updateLyricsHighlight(audio.currentTime);
         
         // Save current time to restore if page reloads
         try {
@@ -2096,15 +2106,143 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Lyrics update ──────────────────────────────────────────────────────
     function updateLyrics(track) {
-        if (!lyricsOverlayContent) return;
+        if (!track) return;
         if (lyricsOverlayTitle) {
-            lyricsOverlayTitle.textContent = track?.title ? `Lyrics - ${track.title}` : 'Lyrics';
+            lyricsOverlayTitle.textContent = track.title ? `Lyrics - ${track.title}` : 'Lyrics';
         }
-        if (track.lyrics && track.lyrics.trim()) {
-            lyricsOverlayContent.textContent = track.lyrics;
+        if (!currentLyricsSegments || currentLyricsSegments.length === 0) {
+            fetchAndLoadLyrics(track.id);
         } else {
-            lyricsOverlayContent.innerHTML = '<div class="lyrics-overlay-empty">Kh&#244;ng c&#243; l&#7901;i b&#224;i h&#225;t</div>';
+            renderSyncedLyrics();
         }
+    }
+
+    function fetchAndLoadLyrics(trackId) {
+        currentLyricsSegments = [];
+        if (!trackId) {
+            renderFallbackLyrics();
+            return;
+        }
+        fetch(`/api/songs/${trackId}/lyrics`)
+            .then(res => {
+                if (!res.ok) throw new Error('No synced lyrics');
+                return res.json();
+            })
+            .then(data => {
+                if (Array.isArray(data) && data.length > 0) {
+                    currentLyricsSegments = data;
+                    renderSyncedLyrics();
+                } else {
+                    currentLyricsSegments = [];
+                    renderFallbackLyrics();
+                }
+            })
+            .catch(err => {
+                console.log('Failed to load synced lyrics, using fallback:', err);
+                currentLyricsSegments = [];
+                renderFallbackLyrics();
+            });
+    }
+
+    function renderSyncedLyrics() {
+        const containers = [lyricsOverlayContent, expandedLyricsPreview];
+        containers.forEach(container => {
+            if (!container) return;
+            container.innerHTML = '';
+            
+            if (currentLyricsSegments.length === 0) {
+                container.innerHTML = '<div class="lyrics-overlay-empty">Kh&#244;ng c&#243; l&#7901;i b&#224;i h&#225;t</div>';
+                return;
+            }
+            
+            // Set scroll behavior to smooth
+            container.style.scrollBehavior = 'smooth';
+
+            currentLyricsSegments.forEach((seg, idx) => {
+                const lineEl = document.createElement('div');
+                lineEl.className = 'lyric-line';
+                lineEl.dataset.index = idx;
+                lineEl.dataset.start = seg.start;
+                lineEl.dataset.end = seg.end;
+                lineEl.textContent = seg.line;
+                
+                // Click to seek
+                lineEl.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    audio.currentTime = parseFloat(seg.start);
+                    audio.play().catch(() => {});
+                });
+                
+                container.appendChild(lineEl);
+            });
+        });
+    }
+
+    function renderFallbackLyrics() {
+        const text = currentTrack?.lyrics || '';
+        const containers = [lyricsOverlayContent, expandedLyricsPreview];
+        containers.forEach(container => {
+            if (!container) return;
+            if (text.trim()) {
+                // Split by newlines and render as simple static lines
+                container.innerHTML = text.split('\n')
+                    .map(line => {
+                        const trimmed = line.trim();
+                        if (trimmed.startsWith('[') && trimmed.endsWith(']')) {
+                            return `<div class="lyric-line-static" style="opacity: 0.5; font-size: 0.8em; font-weight: normal; margin-top: 15px;">${escHtml(trimmed)}</div>`;
+                        }
+                        return `<div class="lyric-line-static">${escHtml(trimmed)}</div>`;
+                    })
+                    .join('');
+            } else {
+                container.innerHTML = '<div class="lyrics-overlay-empty">Kh&#244;ng c&#243; l&#7901;i b&#224;i h&#225;t</div>';
+            }
+        });
+    }
+
+    function updateLyricsHighlight(currentTime) {
+        if (!currentLyricsSegments || currentLyricsSegments.length === 0) return;
+        
+        // Find active index
+        let activeIdx = -1;
+        for (let i = 0; i < currentLyricsSegments.length; i++) {
+            const seg = currentLyricsSegments[i];
+            if (currentTime >= seg.start && currentTime <= seg.end) {
+                activeIdx = i;
+                break;
+            }
+        }
+        
+        // If not found in range, find the closest one that has started
+        if (activeIdx === -1) {
+            for (let i = currentLyricsSegments.length - 1; i >= 0; i--) {
+                if (currentTime >= currentLyricsSegments[i].start) {
+                    activeIdx = i;
+                    break;
+                }
+            }
+        }
+        
+        if (activeIdx === -1 && currentLyricsSegments.length > 0) {
+            activeIdx = 0;
+        }
+
+        const containers = [lyricsOverlayContent, expandedLyricsPreview];
+        containers.forEach(container => {
+            if (!container) return;
+            const lines = container.querySelectorAll('.lyric-line');
+            lines.forEach((line, idx) => {
+                if (idx === activeIdx) {
+                    if (!line.classList.contains('active')) {
+                        line.classList.add('active');
+                        // Scroll smoothly to keep active line centered
+                        line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                    }
+                } else {
+                    line.classList.remove('active');
+                }
+            });
+        });
     }
 
     // ── Toast notification ────────────────────────────────────────────────
@@ -2169,6 +2307,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalTimeEl.textContent = track.duration ? fmt(track.duration) : '0:00';
             currentTrack = track;
             updateNowPlayingSidebar(track);
+            fetchAndLoadLyrics(track.id);
         }
     }
 
@@ -2308,7 +2447,220 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
+    // ── Right Sidebar View Switching ────────────────────────────────────────
+    function setSidebarView(viewName) {
+        if (!rightSidebar) return;
+        // Remove all existing view-* classes
+        rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
+        // Add the requested view class
+        rightSidebar.classList.add('view-' + viewName);
+
+        // Update tab button active states
+        const tabBtns = rightSidebar.querySelectorAll('.rs-tab-btn');
+        tabBtns.forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.view === viewName);
+        });
+
+        // Update player bar button active states
+        const btnNowPlaying = document.getElementById('btn-now-playing');
+        if (btnNowPlaying) btnNowPlaying.classList.toggle('active', viewName === 'playing');
+        if (btnQueue) btnQueue.classList.toggle('active', viewName === 'queue');
+        if (btnLyrics) btnLyrics.classList.toggle('btn-active', viewName === 'lyrics');
+    }
+
+    // ── Right Sidebar Tab / Button Handlers ──────────────────────────────────
+    (function initSidebarTabs() {
+        if (!rightSidebar) return;
+
+        // Tab buttons inside sidebar header
+        rightSidebar.querySelectorAll('.rs-tab-btn').forEach(tab => {
+            tab.addEventListener('click', () => {
+                const view = tab.dataset.view;
+                if (view) setSidebarView(view);
+            });
+        });
+
+        // Player bar "Now Playing" button
+        const btnNowPlaying = document.getElementById('btn-now-playing');
+        if (btnNowPlaying) {
+            btnNowPlaying.addEventListener('click', () => {
+                rightSidebar.classList.remove('collapsed');
+                setSidebarView('playing');
+            });
+        }
+
+        // Player bar "Queue" button
+        if (btnQueue) {
+            btnQueue.addEventListener('click', () => {
+                rightSidebar.classList.remove('collapsed');
+                setSidebarView('queue');
+                renderQueuePanel();
+            });
+        }
+
+        // Close sidebar button — go back to "playing" view
+        const btnCloseSidebar = document.getElementById('btn-close-right-sidebar');
+        if (btnCloseSidebar) {
+            btnCloseSidebar.addEventListener('click', () => {
+                setSidebarView('playing');
+            });
+        }
+    })();
+
 });
+
+/* ============================================================ */
+/* AI CHAT SIDEBAR (independent of player init)                 */
+/* ============================================================ */
+(function() {
+    function setSidebarViewForAi(viewName) {
+        const sidebar = document.getElementById('right-sidebar');
+        if (!sidebar) return;
+        sidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
+        sidebar.classList.add('view-' + viewName);
+    }
+
+    // Click on "Đặt câu hỏi" button — uses event delegation
+    document.body.addEventListener('click', (e) => {
+        const btnAskAi = e.target.closest('#btn-track-ask-ai');
+        if (!btnAskAi) return;
+        e.preventDefault();
+        e.stopPropagation();
+
+        const mediaId = btnAskAi.dataset.id;
+        const mediaType = btnAskAi.dataset.type;
+        if (!mediaId) return;
+
+        // Show sidebar & switch to AI chat view
+        const sidebar = document.getElementById('right-sidebar');
+        if (sidebar) {
+            sidebar.classList.remove('collapsed');
+            setSidebarViewForAi('ai-chat');
+        }
+
+        // Set title in sidebar
+        const titleEl = document.getElementById('rs-ai-title');
+        if (titleEl) {
+            titleEl.textContent = mediaType === 'VIDEO' ? 'Hỏi về video này' : 'Hỏi về bài hát này';
+        }
+
+        // Get chat elements
+        const aiForm = document.getElementById('rs-ai-form');
+        const chatLog = document.getElementById('rs-ai-chat-log');
+        const greetingBox = document.getElementById('rs-ai-greeting');
+        const suggestionsBox = document.getElementById('rs-ai-suggestions-box');
+
+        if (!aiForm || !chatLog) return;
+
+        // If switching tracks, clear conversation
+        if (aiForm.dataset.mediaId !== mediaId) {
+            aiForm.dataset.mediaId = mediaId;
+            chatLog.innerHTML = '';
+            if (greetingBox) {
+                greetingBox.textContent = 'Xin chào! Bạn có thắc mắc về nội dung đang xem? Tôi sẵn sàng giúp bạn.';
+            }
+            if (suggestionsBox) {
+                suggestionsBox.style.display = 'block';
+            }
+        }
+
+        // Set up form submit handler (bind once)
+        if (!aiForm.dataset.submitInit) {
+            aiForm.dataset.submitInit = "true";
+            aiForm.addEventListener('submit', (ev) => {
+                ev.preventDefault();
+                const aiInput = document.getElementById('rs-ai-input');
+                const q = aiInput?.value?.trim();
+                if (!q) return;
+                aiInput.value = '';
+                doAskAi(q);
+            });
+        }
+    });
+
+    function doAskAi(questionText) {
+        const q = (questionText || '').trim();
+        const aiForm = document.getElementById('rs-ai-form');
+        const chatLog = document.getElementById('rs-ai-chat-log');
+        const suggestionsBox = document.getElementById('rs-ai-suggestions-box');
+        const mediaId = aiForm?.dataset?.mediaId;
+        if (!q || !mediaId || !chatLog) return;
+
+        const userMsg = document.createElement('div');
+        userMsg.className = 'rs-ai-msg user';
+        userMsg.style.cssText = 'align-self: flex-end; background: #1ed760; color: #000; border-radius: 16px 16px 4px 16px; padding: 8px 12px; max-width: 85%; font-size: 13.5px; font-weight: 500; line-height: 1.4; word-break: break-word;';
+        userMsg.textContent = q;
+        chatLog.appendChild(userMsg);
+        chatLog.scrollTop = chatLog.scrollHeight;
+
+        if (suggestionsBox) suggestionsBox.style.display = 'none';
+
+        const botMsg = document.createElement('div');
+        botMsg.className = 'rs-ai-msg assistant';
+        botMsg.style.cssText = 'align-self: flex-start; background: #282828; color: #fff; border-radius: 16px 16px 16px 4px; padding: 10px 14px; max-width: 85%; font-size: 13.5px; line-height: 1.45; word-break: break-word; border: 1px solid rgba(255,255,255,0.05);';
+        botMsg.innerHTML = '<span style="color: #b3b3b3;">Đang suy nghĩ...</span>';
+        chatLog.appendChild(botMsg);
+        chatLog.scrollTop = chatLog.scrollHeight;
+
+        const body = new URLSearchParams();
+        body.append('question', q);
+
+        fetch('/api/ai/chat/' + encodeURIComponent(mediaId), {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/x-www-form-urlencoded',
+                'X-XSRF-TOKEN': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+            },
+            body
+        })
+        .then(res => res.json().catch(() => ({})))
+        .then(data => {
+            if (data.answer) {
+                botMsg.innerHTML = data.answer.replace(/\n/g, '<br>');
+            } else {
+                botMsg.innerHTML = `<span style="color: #ed4245;">${data.error || 'AI chưa có câu trả lời phù hợp.'}</span>`;
+            }
+            chatLog.scrollTop = chatLog.scrollHeight;
+        })
+        .catch(err => {
+            console.warn('AI chat failed', err);
+            botMsg.innerHTML = '<span style="color: #ed4245;">Không thể kết nối AI lúc này. Vui lòng thử lại sau.</span>';
+            chatLog.scrollTop = chatLog.scrollHeight;
+        });
+    }
+
+    // Suggestions chips — also delegation
+    document.body.addEventListener('click', (e) => {
+        const chip = e.target.closest('.rs-ai-chip.track-ai-chip');
+        if (!chip) return;
+        e.stopPropagation();
+        doAskAi(chip.textContent.trim());
+    });
+
+    // Close AI chat → animate out, then switch back to "playing" view
+    document.body.addEventListener('click', (e) => {
+        if (!e.target.closest('#btn-close-right-sidebar')) return;
+        const sidebar = document.getElementById('right-sidebar');
+        if (!sidebar || !sidebar.classList.contains('view-ai-chat')) return;
+
+        // Animate out the AI chat panel
+        const aiView = sidebar.querySelector('.rs-view-ai-chat');
+        const aiHeader = sidebar.querySelector('.rs-header-ai');
+        if (aiView) {
+            aiView.style.animation = 'rsSlideOut 0.25s cubic-bezier(0.4, 0, 1, 1) forwards';
+        }
+        if (aiHeader) {
+            aiHeader.style.animation = 'rsFadeOut 0.2s ease forwards';
+        }
+
+        // After animation completes, switch view and reset
+        setTimeout(() => {
+            setSidebarViewForAi('playing');
+            if (aiView) aiView.style.animation = '';
+            if (aiHeader) aiHeader.style.animation = '';
+        }, 260);
+    });
+})();
 
 /* ============================================================ */
 /* PLAYLIST MODAL                                               */

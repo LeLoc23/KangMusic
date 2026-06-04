@@ -20,20 +20,19 @@ public class LibraryService {
     private static final Logger log = LoggerFactory.getLogger(LibraryService.class);
 
     private final UserLibraryRepository libraryRepo;
-    private final MediaItemRepository   mediaItemRepo;
+    private final MediaItemRepository mediaItemRepo;
 
     public LibraryService(UserLibraryRepository libraryRepo, MediaItemRepository mediaItemRepo) {
-        this.libraryRepo   = libraryRepo;
+        this.libraryRepo = libraryRepo;
         this.mediaItemRepo = mediaItemRepo;
     }
-
-    // ── Đọc ──────────────────────────────────────────────────────────────────
 
     @Transactional(readOnly = true)
     public List<MediaItem> getUserLibrary(Long userId) {
         return libraryRepo.findByUserIdOrderByAddedAtDesc(userId)
                 .stream()
                 .map(UserLibrary::getMediaItem)
+                .filter(media -> media != null && !media.isDeleted() && media.isApproved())
                 .collect(Collectors.toList());
     }
 
@@ -47,23 +46,19 @@ public class LibraryService {
         return libraryRepo.findLikedMediaIds(userId);
     }
 
-    // ── Toggle (thêm/xóa) ────────────────────────────────────────────────────
-
-    /**
-     * Toggle yêu thích: nếu chưa có → thêm, nếu đã có → xóa.
-     * @return true nếu sau thao tác đang được yêu thích, false nếu đã bỏ yêu thích
-     */
     public boolean toggleLibrary(Long userId, Long mediaItemId) {
         var existing = libraryRepo.findByUserIdAndMediaItemId(userId, mediaItemId);
         if (existing.isPresent()) {
             libraryRepo.delete(existing.get());
-            log.info("Bỏ yêu thích bài id={} userId={}", mediaItemId, userId);
+            log.info("Unliked media id={} userId={}", mediaItemId, userId);
             return false;
         }
+
         MediaItem media = mediaItemRepo.findByIdAndDeletedFalse(mediaItemId)
-                .orElseThrow(() -> new IllegalArgumentException("Bài hát không tồn tại"));
+                .filter(MediaItem::isApproved)
+                .orElseThrow(() -> new IllegalArgumentException("media_not_found"));
         libraryRepo.save(new UserLibrary(userId, media));
-        log.info("Yêu thích bài id={} userId={}", mediaItemId, userId);
+        log.info("Liked media id={} userId={}", mediaItemId, userId);
         return true;
     }
 }

@@ -100,7 +100,7 @@
                                     </div>
                                 </div>
                             </td>
-                            <td class="col-album track-artist-cell" th:text="${item.title}">Album</td>
+                            <td class="col-album track-artist-cell" th:text="${item.album != null ? item.album : '-'}">Album</td>
                             <td class="col-date track-artist-cell">vừa thêm</td>
                             <td class="col-duration track-duration-cell"
                                 th:text="${item.durationSeconds != null ?

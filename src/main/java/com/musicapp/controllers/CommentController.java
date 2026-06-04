@@ -71,7 +71,9 @@ public class CommentController {
             return ResponseEntity.status(401).body(Map.of("error", "User không hợp lệ"));
         }
 
-        MediaItem mediaItem = mediaItemRepo.findByIdAndDeletedFalse(mediaId).orElse(null);
+        MediaItem mediaItem = mediaItemRepo.findByIdAndDeletedFalse(mediaId)
+                .filter(MediaItem::isApproved)
+                .orElse(null);
         if (mediaItem == null) {
             return ResponseEntity.status(404).body(Map.of("error", "Media item không tồn tại"));
         }

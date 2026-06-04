@@ -17,28 +17,41 @@ public class User {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(unique = true, nullable = false, length = 50)   // I5 FIX: length limit
+    @Column(unique = true, nullable = false, length = 50, columnDefinition = "NVARCHAR(50)")   // I5 FIX: length limit
     private String username;
 
-    @Column(nullable = false)
+    @Column(nullable = false, columnDefinition = "NVARCHAR(255)")
     private String password;
 
-    @Column(unique = true, nullable = false, length = 100)  // I5 FIX: length limit
+    @Column(unique = true, nullable = false, length = 100, columnDefinition = "NVARCHAR(100)")  // I5 FIX: length limit
     private String email;
 
-    @Column(length = 100)
+    @Column(length = 100, columnDefinition = "NVARCHAR(100)")
     private String fullName;
 
-    @Column(nullable = false, length = 20)
+    @Column(length = 30, columnDefinition = "NVARCHAR(30)")
+    private String phoneNumber;
+
+    @Column(nullable = false, length = 20, columnDefinition = "NVARCHAR(20)")
     private String role;
 
     @Column(nullable = false)
     private boolean locked = false;
 
+    @Column(name = "reset_token", columnDefinition = "NVARCHAR(255)")
     private String resetToken;
 
     /** C4 FIX: Reset tokens now have an expiry timestamp */
     private LocalDateTime resetTokenExpiry;
+
+    @Column(name = "email_verified", nullable = false, columnDefinition = "BIT DEFAULT 0")
+    private boolean emailVerified = false;
+
+    @Column(name = "email_verification_code", length = 6, columnDefinition = "NVARCHAR(6)")
+    private String emailVerificationCode;
+
+    @Column(name = "email_verification_expiry")
+    private LocalDateTime emailVerificationExpiry;
 
     public User() {}
 
@@ -66,6 +79,9 @@ public class User {
     public String getFullName() { return fullName; }
     public void setFullName(String fullName) { this.fullName = fullName; }
 
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
+
     public String getRole() { return role; }
     public void setRole(String role) { this.role = role; }
 
@@ -77,4 +93,13 @@ public class User {
 
     public LocalDateTime getResetTokenExpiry() { return resetTokenExpiry; }
     public void setResetTokenExpiry(LocalDateTime resetTokenExpiry) { this.resetTokenExpiry = resetTokenExpiry; }
+
+    public boolean isEmailVerified() { return emailVerified; }
+    public void setEmailVerified(boolean emailVerified) { this.emailVerified = emailVerified; }
+
+    public String getEmailVerificationCode() { return emailVerificationCode; }
+    public void setEmailVerificationCode(String emailVerificationCode) { this.emailVerificationCode = emailVerificationCode; }
+
+    public LocalDateTime getEmailVerificationExpiry() { return emailVerificationExpiry; }
+    public void setEmailVerificationExpiry(LocalDateTime emailVerificationExpiry) { this.emailVerificationExpiry = emailVerificationExpiry; }
 }

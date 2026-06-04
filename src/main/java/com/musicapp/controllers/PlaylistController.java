@@ -190,7 +190,7 @@ public class PlaylistController {
 
         List<Map<String, Object>> tracks = playlist.getItems().stream()
                 .map(pi -> pi.getMediaItem())
-                .filter(m -> m != null && !m.isDeleted() && m.getFileName() != null)
+                .filter(m -> m != null && !m.isDeleted() && m.isApproved() && m.getFileName() != null)
                 .map(m -> {
                     Map<String, Object> row = new java.util.LinkedHashMap<>();
                     row.put("id", m.getId());

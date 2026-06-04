@@ -148,11 +148,19 @@
                                         </div>
                                         <div class="track-title-info">
                                             <div class="track-title-name" th:text="${pi.mediaItem.title}">Tên bài</div>
-                                            <div class="track-title-artist" th:text="${pi.mediaItem.artist}">Ca sĩ</div>
+                                            <div class="track-title-artist">
+                                                <th:block th:if="${#lists.isEmpty(pi.mediaItem.creators)}" th:text="${pi.mediaItem.artist}">Ca sĩ</th:block>
+                                                <th:block th:unless="${#lists.isEmpty(pi.mediaItem.creators)}">
+                                                    <span th:each="c, iter : ${pi.mediaItem.creators}">
+                                                        <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                                        <span th:if="${!iter.last}">, </span>
+                                                    </span>
+                                                </th:block>
+                                            </div>
                                         </div>
                                     </div>
                                 </td>
-                                <td class="col-album track-artist-cell" th:text="${pi.mediaItem.title}">Album</td>
+                                <td class="col-album track-artist-cell" th:text="${pi.mediaItem.album != null ? pi.mediaItem.album : '-'}">Album</td>
                                 <td class="col-date track-artist-cell">vừa thêm</td>
                                 <td class="col-duration track-duration-cell"
                                     th:text="${pi.mediaItem.durationSeconds != null ?

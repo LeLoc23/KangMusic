@@ -1,0 +1,350 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head th:replace="~{fragments :: head(${artist.stageName + ' - Nghệ sĩ - KangMusic'})}"></head>
+
+<body>
+    <div class="page-wrapper">
+        <!-- TOP BAR -->
+        <div th:replace="~{fragments :: top-bar}"></div>
+
+        <div class="main-layout">
+            <!-- LIBRARY SIDEBAR -->
+            <div th:replace="~{fragments :: library-sidebar}"></div>
+
+            <!-- MAIN CONTENT -->
+            <main class="content-area" id="main-content" th:fragment="main-content"
+                th:with="pageTitle=${artist.stageName} + ' - Nghệ sĩ - KangMusic'">
+
+                <style>
+                    /* Artist Profile Custom Styles */
+                    .artist-hero {
+                        display: flex;
+                        flex-direction: column;
+                        justify-content: flex-end;
+                        height: 340px;
+                        padding: 40px 32px 32px;
+                        margin-left: -32px;
+                        margin-right: -32px;
+                        margin-top: -64px;
+                        position: relative;
+                        background: linear-gradient(to bottom, rgba(40, 44, 52, 0.8), #121212);
+                        background-size: cover;
+                        background-position: center;
+                        overflow: hidden;
+                        border-bottom: 1px solid rgba(255, 255, 255, 0.05);
+                    }
+
+                    .artist-hero::before {
+                        content: '';
+                        position: absolute;
+                        inset: 0;
+                        background: radial-gradient(circle at 20% 30%, rgba(30, 215, 96, 0.25), transparent 50%),
+                                    linear-gradient(to bottom, rgba(18, 18, 18, 0) 40%, rgba(18, 18, 18, 0.95) 100%);
+                        z-index: 1;
+                    }
+
+                    .artist-hero-content {
+                        position: relative;
+                        z-index: 2;
+                        display: flex;
+                        flex-direction: column;
+                        gap: 12px;
+                    }
+
+                    .artist-verified {
+                        display: inline-flex;
+                        align-items: center;
+                        gap: 6px;
+                        font-size: 13px;
+                        font-weight: 700;
+                        color: #3d91ff;
+                        text-shadow: 0 2px 4px rgba(0, 0, 0, 0.4);
+                    }
+
+                    .artist-verified .km-symbol {
+                        font-size: 16px;
+                    }
+
+                    .artist-name-title {
+                        font-size: clamp(36px, 6vw, 72px);
+                        font-weight: 900;
+                        letter-spacing: -2px;
+                        margin: 0;
+                        line-height: 1.1;
+                        color: #fff;
+                        text-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
+                    }
+
+                    .artist-stats {
+                        font-size: 14px;
+                        color: #e5e5e5;
+                        font-weight: 500;
+                        text-shadow: 0 1px 3px rgba(0, 0, 0, 0.4);
+                        display: flex;
+                        align-items: center;
+                        gap: 8px;
+                    }
+
+                    .artist-stats-dot {
+                        color: #727272;
+                    }
+
+                    .artist-action-bar {
+                        display: flex;
+                        align-items: center;
+                        gap: 24px;
+                        margin: 24px 0 32px;
+                    }
+
+                    .artist-play-btn {
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                        width: 56px;
+                        height: 56px;
+                        border-radius: 50%;
+                        background: #1ed760;
+                        color: #000;
+                        border: none;
+                        cursor: pointer;
+                        box-shadow: 0 8px 24px rgba(29, 185, 84, 0.3);
+                        transition: transform 0.2s, background-color 0.2s;
+                    }
+
+                    .artist-play-btn:hover {
+                        transform: scale(1.05);
+                        background: #1fdf64;
+                    }
+
+                    .artist-play-btn .km-symbol {
+                        font-size: 28px;
+                    }
+
+                    .artist-follow-btn {
+                        background: transparent;
+                        border: 1px solid rgba(255, 255, 255, 0.3);
+                        color: #fff;
+                        font-size: 13px;
+                        font-weight: 700;
+                        padding: 8px 24px;
+                        border-radius: 20px;
+                        cursor: pointer;
+                        letter-spacing: 0.1em;
+                        text-transform: uppercase;
+                        transition: border-color 0.2s, transform 0.1s;
+                    }
+
+                    .artist-follow-btn:hover {
+                        border-color: #fff;
+                        transform: scale(1.04);
+                    }
+
+                    .artist-section-title {
+                        font-size: 22px;
+                        font-weight: 800;
+                        margin: 0 0 20px 0;
+                        color: #fff;
+                    }
+
+                    .artist-content-grid {
+                        display: grid;
+                        grid-template-columns: 1fr;
+                        gap: 40px;
+                    }
+
+                    @media (min-width: 992px) {
+                        .artist-content-grid {
+                            grid-template-columns: 3fr 2fr;
+                        }
+                    }
+
+                    .artist-bio-card {
+                        background: linear-gradient(135deg, rgba(255, 255, 255, 0.03), rgba(255, 255, 255, 0.01));
+                        border: 1px solid rgba(255, 255, 255, 0.05);
+                        border-radius: 12px;
+                        padding: 24px;
+                        height: fit-content;
+                    }
+
+                    .artist-bio-text {
+                        font-size: 14.5px;
+                        line-height: 1.6;
+                        color: #b3b3b3;
+                        white-space: pre-wrap;
+                    }
+
+                    .empty-tracks-text {
+                        color: #727272;
+                        font-size: 15px;
+                        padding: 30px 0;
+                        text-align: center;
+                    }
+                </style>
+
+                <!-- Hero Section Banner -->
+                <div class="artist-hero">
+                    <div class="artist-hero-content">
+                        <div class="artist-verified">
+                            <span class="km-symbol">verified</span>
+                            <span>Do KangMusic xác minh</span>
+                        </div>
+                        <h1 class="artist-name-title" th:text="${artist.stageName}">Tên Nghệ Sĩ</h1>
+                        <div class="artist-stats">
+                            <span th:with="playCountSum=${#lists.isEmpty(mediaList) ? 0 : #aggregates.sum(mediaList.![playCount])}" 
+                                  th:text="${#numbers.formatInteger(124320 + playCountSum * 17, 1, 'POINT')} + ' người nghe hàng tháng'">
+                                124.320 người nghe hàng tháng
+                            </span>
+                            <span class="artist-stats-dot">•</span>
+                            <span th:with="playCountSum=${#lists.isEmpty(mediaList) ? 0 : #aggregates.sum(mediaList.![playCount])}"
+                                  th:text="${#numbers.formatInteger(playCountSum, 1, 'POINT')} + ' tổng lượt phát'">
+                                0 tổng lượt phát
+                            </span>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Action Bar -->
+                <div class="artist-action-bar">
+                    <button class="artist-play-btn" th:if="${!#lists.isEmpty(mediaList)}"
+                            id="btn-artist-play-all"
+                            th:data-first-id="${mediaList.get(0).id}"
+                            title="Phát tất cả">
+                        <span class="km-symbol">play_arrow</span>
+                    </button>
+                    <button class="artist-follow-btn">Đang theo dõi</button>
+                </div>
+
+                <!-- Content Grid (Popular Tracks & Bio) -->
+                <div class="artist-content-grid">
+                    
+                    <!-- Popular Tracks Left Column -->
+                    <div class="artist-tracks-col">
+                        <h2 class="artist-section-title">Phổ biến</h2>
+                        
+                        <div th:if="${#lists.isEmpty(mediaList)}" class="empty-tracks-text">
+                            Chưa có bài hát nào được tải lên từ nghệ sĩ này.
+                        </div>
+
+                        <table class="track-table" th:unless="${#lists.isEmpty(mediaList)}">
+                            <thead>
+                                <tr>
+                                    <th class="track-num">#</th>
+                                    <th>TIÊU ĐỀ</th>
+                                    <th>THỂ LOẠI</th>
+                                    <th style="text-align: right; padding-right: 20px;">LƯỢT NGHE</th>
+                                    <th>THỜI LƯỢNG</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <tr th:each="s, stat : ${mediaList}" class="track-row">
+                                    <td class="track-num">
+                                        <span class="track-num-label" th:text="${stat.index + 1}">1</span>
+                                        <button class="track-play-btn media-play-btn"
+                                                th:data-id="${s.id}"
+                                                th:data-title="${s.title}"
+                                                th:data-artist="${s.artist}"
+                                                th:data-src="@{'/stream/' + ${s.fileName}}"
+                                                th:data-type="${s.type}"
+                                                th:data-genre="${s.genre}"
+                                                th:data-emotion="${s.emotionLabel}"
+                                                th:data-lyrics="${s.lyrics}"
+                                                th:data-poster="${s.posterFilename}"
+                                                aria-label="Phát">
+                                            <span class="km-symbol" aria-hidden="true">play_arrow</span>
+                                        </button>
+                                    </td>
+                                    <td class="track-title-cell">
+                                        <div class="track-title-with-art">
+                                            <span class="track-art-mini" style="position:relative; overflow:hidden;">
+                                                <img th:if="${s.posterFilename != null}"
+                                                     th:src="@{'/stream/' + ${s.posterFilename}}"
+                                                     style="width:100%; height:100%; object-fit:cover;">
+                                                <span th:if="${s.posterFilename == null}"
+                                                      class="km-symbol" aria-hidden="true" style="font-size:22px;"
+                                                      th:text="${s.type.name() == 'VIDEO' ? 'smart_display' : 'music_note'}">music_note</span>
+                                            </span>
+                                            <span class="track-title-info">
+                                                <a th:href="@{'/track/' + ${s.id}}" class="track-title-name" th:text="${s.title}">Tên bài</a>
+                                                <span class="track-title-artist" th:text="${s.artist}">Ca sĩ</span>
+                                            </span>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <span th:if="${s.genre != null and s.genre != ''}"
+                                              class="genre-chip"
+                                              style="font-size:10px; padding:2px 8px; margin:0;"
+                                              th:text="${s.genre}"></span>
+                                        <span th:if="${s.genre == null or s.genre == ''}">--</span>
+                                    </td>
+                                    <td style="text-align: right; padding-right: 20px; font-variant-numeric: tabular-nums;" 
+                                        class="track-artist-cell" 
+                                        th:text="${#numbers.formatInteger(s.playCount, 1, 'POINT')}">0</td>
+                                    <td class="track-duration-cell">
+                                        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px;">
+                                            <span th:text="${s.durationSeconds != null ? (#numbers.formatInteger(s.durationSeconds / 60, 1) + ':' + #numbers.formatInteger(s.durationSeconds % 60, 2)) : '--'}">0:00</span>
+                                            <div style="display: flex; gap: 4px;">
+                                                <!-- Like Button -->
+                                                <button class="track-action-icon-btn media-like-btn" th:data-id="${s.id}" 
+                                                        th:classappend="${likedIds != null and likedIds.contains(s.id) ? ' liked' : ''}"
+                                                        style="padding: 4px;" title="Thích">
+                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>
+                                                </button>
+                                                <!-- Add to Playlist -->
+                                                <button class="track-action-icon-btn" data-action="add-to-playlist" th:data-media-id="${s.id}"
+                                                        style="padding: 4px;" title="Thêm vào playlist">
+                                                    <svg viewBox="0 0 24 24" width="14" height="14" fill="currentColor"><path d="M14 10H2v2h12v-2zm0-4H2v2h12V6zm4 8v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zM2 16h8v-2H2v2z"/></svg>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <!-- Bio/About Right Column -->
+                    <div class="artist-bio-col">
+                        <h2 class="artist-section-title">Giới thiệu</h2>
+                        <div class="artist-bio-card">
+                            <h3 style="color:#fff; font-size:16px; margin: 0 0 12px 0;">Tiểu sử nghệ sĩ</h3>
+                            <p class="artist-bio-text" 
+                               th:text="${artist.bio != null and !artist.bio.trim().isEmpty() ? artist.bio : 'Chưa có thông tin tiểu sử nghệ sĩ cho nghệ sĩ này.'}">
+                                Tiểu sử nghệ sĩ...
+                            </p>
+                        </div>
+                    </div>
+
+                </div>
+
+                <div style="height: 120px;"></div>
+            </main>
+
+            <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+            <div th:replace="~{fragments :: right-sidebar}"></div>
+        </div>
+
+        <div th:replace="~{fragments :: global-player}"></div>
+    </div>
+
+    <!-- Script to handle clicking the big Play button to play the first track -->
+    <script th:inline="javascript">
+        document.addEventListener('DOMContentLoaded', () => {
+            const btnPlayAll = document.getElementById('btn-artist-play-all');
+            if (btnPlayAll) {
+                btnPlayAll.addEventListener('click', () => {
+                    const firstTrackId = btnPlayAll.dataset.firstId;
+                    if (firstTrackId) {
+                        // Find the play button of the first track in the table and click it
+                        const firstTrackPlayBtn = document.querySelector(`.track-play-btn[data-id="${firstTrackId}"]`);
+                        if (firstTrackPlayBtn) {
+                            firstTrackPlayBtn.click();
+                        }
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+
+</html>

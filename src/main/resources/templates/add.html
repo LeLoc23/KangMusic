@@ -38,8 +38,24 @@
                     <label>Tên bài hát / video <span style="color:red">*</span></label>
                     <input type="text" name="title" required placeholder="VD: Lạc Trôi">
 
-                    <label>Ca sĩ / Nghệ sĩ <span style="color:red">*</span></label>
-                    <input type="text" name="artist" required placeholder="VD: Sơn Tùng M-TP">
+                    <div th:if="${isAdminUpload}">
+                        <label>Ca sĩ / Nghệ sĩ</label>
+                        <input type="text" name="artist" placeholder="Nhập thủ công nếu chưa có Creator/Singer">
+                    </div>
+                    <div th:unless="${isAdminUpload}">
+                        <label>Ca sĩ / Nghệ sĩ</label>
+                        <input type="hidden" name="artist" th:value="${currentCreator != null ? currentCreator.stageName : ''}">
+                        <div style="padding:10px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; margin-bottom:16px;"
+                             th:text="${currentCreator != null ? currentCreator.stageName : 'Creator/Singer'}">Creator/Singer</div>
+                    </div>
+
+                    <label>Creator/Singer trình bày hoặc feat <span style="font-size:11px; color:var(--text-muted)">(có thể chọn nhiều)</span></label>
+                    <select name="creatorIds" multiple size="5">
+                        <option th:each="creator : ${approvedCreators}"
+                                th:if="${isAdminUpload or currentCreator == null or creator.id != currentCreator.id}"
+                                th:value="${creator.id}"
+                                th:text="${creator.stageName + ' - @' + creator.user.username}">Singer</option>
+                    </select>
 
                     <label>Ảnh bìa (Poster) <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
                     <div class="poster-upload-wrapper" style="margin-bottom:16px;">
@@ -85,6 +101,9 @@
                         <option value="INDIE">Indie</option>
                         <option value="LOFI">Lo-fi</option>
                     </select>
+
+                    <label>Album <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <input type="text" name="album" placeholder="VD: Album đầu tay">
 
                     <label>Nhãn Cảm Xúc <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
                     <input type="text" name="emotionLabel" placeholder="VD: Buồn, Sôi động, Chill...">

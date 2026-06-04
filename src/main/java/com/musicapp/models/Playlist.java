@@ -16,14 +16,14 @@ public class Playlist {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
-    @Column(nullable = false, length = 150)
+    @Column(nullable = false, length = 150, columnDefinition = "NVARCHAR(150)")
     private String name;
 
-    @Column(length = 500)
+    @Column(length = 500, columnDefinition = "NVARCHAR(500)")
     private String description;
 
     /** Emoji bìa playlist — VD: 🎵, 🔥, 🌙 */
-    @Column(name = "cover_emoji", length = 10)
+    @Column(name = "cover_emoji", length = 10, columnDefinition = "NVARCHAR(10)")
     private String coverEmoji = "🎵";
 
     @Column(name = "user_id", nullable = false)

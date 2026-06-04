@@ -1,8 +1,11 @@
 package com.musicapp.controllers;
 
 import com.musicapp.dto.MediaItemDto;
+import com.musicapp.models.CreatorProfile;
 import com.musicapp.services.LibraryService;
 import com.musicapp.services.MediaService;
+import com.musicapp.services.CreatorService;
+import com.musicapp.services.OpenAiService;
 import com.musicapp.services.PlaylistService;
 import com.musicapp.services.RecommendationService;
 import com.musicapp.services.UserService;
@@ -18,6 +21,7 @@ import org.springframework.web.multipart.MultipartFile;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.ArrayList;
 
 /**
  * CODE-2: Removed dead commented-out import.
@@ -35,17 +39,23 @@ public class MusicController {
     private final LibraryService          libraryService;
     private final PlaylistService         playlistService;
     private final UserService             userService;
+    private final CreatorService          creatorService;
+    private final OpenAiService           openAiService;
 
     public MusicController(MediaService mediaService,
                            RecommendationService recommendationService,
                            LibraryService libraryService,
                            PlaylistService playlistService,
-                           UserService userService) {
+                           UserService userService,
+                           CreatorService creatorService,
+                           OpenAiService openAiService) {
         this.mediaService          = mediaService;
         this.recommendationService = recommendationService;
         this.libraryService        = libraryService;
         this.playlistService       = playlistService;
         this.userService           = userService;
+        this.creatorService        = creatorService;
+        this.openAiService         = openAiService;
     }
 
     /** CODE-4: Centralised via UserService — no UserRepository needed here. */
@@ -56,6 +66,11 @@ public class MusicController {
         } catch (Exception e) {
             return null;
         }
+    }
+
+    private boolean hasAuthority(Authentication auth, String authority) {
+        return auth != null && auth.getAuthorities().stream()
+                .anyMatch(a -> authority.equals(a.getAuthority()));
     }
 
     // ── Trang chủ ─────────────────────────────────────────────────────────────
@@ -100,25 +115,43 @@ public class MusicController {
 
     // ── Upload form ───────────────────────────────────────────────────────────
     @GetMapping("/add")
-    public String showAddForm() {
+    public String showAddForm(Authentication auth, Model model) {
+        boolean isAdmin = hasAuthority(auth, "ROLE_ADMIN");
+        CreatorProfile currentCreator = null;
+        if (!isAdmin) {
+            currentCreator = creatorService.findApprovedByUsername(auth.getName()).orElse(null);
+            if (currentCreator == null) {
+                return "redirect:/profile?error=creator_not_approved";
+            }
+        }
+        model.addAttribute("approvedCreators", creatorService.getApprovedCreators());
+        model.addAttribute("isAdminUpload", isAdmin);
+        model.addAttribute("currentCreator", currentCreator);
         return "add";
     }
 
     @PostMapping("/add")
     public String saveMedia(
             @RequestParam String title,
-            @RequestParam String artist,
+            @RequestParam(required = false, defaultValue = "") String artist,
             @RequestParam("mediaFile") MultipartFile file,
             @RequestParam(value = "posterFile", required = false) MultipartFile posterFile,
             @RequestParam(required = false) String genre,
+            @RequestParam(required = false) String album,
             @RequestParam(required = false) String type,
             @RequestParam(required = false) String emotionLabel,
             @RequestParam(required = false) Integer durationSeconds,
-            @RequestParam(required = false) String lyrics) {
+            @RequestParam(required = false) String lyrics,
+            @RequestParam(required = false) List<Long> creatorIds,
+            Authentication auth) {
 
         try {
+            boolean isAdmin = hasAuthority(auth, "ROLE_ADMIN");
+            Long uploaderUserId = resolveUserId(auth);
+            List<Long> finalCreatorIds = collectCreatorIds(auth, isAdmin, creatorIds);
             String finalType = (type != null) ? type : "AUDIO";
-            mediaService.saveMedia(title, artist, file, posterFile, finalType, emotionLabel, durationSeconds, genre, lyrics);
+            mediaService.saveMedia(title, artist, file, posterFile, finalType, emotionLabel,
+                    durationSeconds, genre, album, lyrics, uploaderUserId, isAdmin, finalCreatorIds);
         } catch (java.io.IOException e) {
             // MAJOR-5 FIX: Log the error and redirect with an error message instead of silently swallowing
             log.error("Upload failed for title='{}' artist='{}': {}", title, artist, e.getMessage(), e);
@@ -128,6 +161,48 @@ public class MusicController {
             return "redirect:/add?error=" + e.getMessage();
         }
         return "redirect:/";
+    }
+
+    @GetMapping("/media/{id}/edit")
+    public String editMediaForm(@PathVariable Long id, Authentication auth, Model model) {
+        var item = mediaService.findByIdForManagement(id);
+        if (item == null) return "redirect:/";
+        boolean isAdmin = hasAuthority(auth, "ROLE_ADMIN");
+        Long userId = resolveUserId(auth);
+        if (!isAdmin && (item.getUploadedByUserId() == null || !item.getUploadedByUserId().equals(userId))) {
+            return "redirect:/?error=access_denied";
+        }
+        model.addAttribute("media", item);
+        model.addAttribute("approvedCreators", creatorService.getApprovedCreators());
+        model.addAttribute("isAdminUpload", isAdmin);
+        model.addAttribute("currentCreator", creatorService.findApprovedByUsername(auth.getName()).orElse(null));
+        return "edit-media";
+    }
+
+    @PostMapping("/media/{id}/edit")
+    public String updateMedia(
+            @PathVariable Long id,
+            @RequestParam String title,
+            @RequestParam(required = false, defaultValue = "") String artist,
+            @RequestParam(value = "posterFile", required = false) MultipartFile posterFile,
+            @RequestParam(required = false) String genre,
+            @RequestParam(required = false) String album,
+            @RequestParam(required = false) String type,
+            @RequestParam(required = false) String emotionLabel,
+            @RequestParam(required = false) Integer durationSeconds,
+            @RequestParam(required = false) String lyrics,
+            @RequestParam(required = false) List<Long> creatorIds,
+            Authentication auth) {
+        try {
+            boolean isAdmin = hasAuthority(auth, "ROLE_ADMIN");
+            Long userId = resolveUserId(auth);
+            mediaService.updateMedia(id, title, artist, posterFile, type, emotionLabel, durationSeconds,
+                    genre, album, lyrics, isAdmin, userId, collectCreatorIds(auth, isAdmin, creatorIds));
+            return isAdmin ? "redirect:/admin" : "redirect:/creator";
+        } catch (Exception e) {
+            log.warn("Update media failed id={}: {}", id, e.getMessage());
+            return "redirect:/media/" + id + "/edit?error=true";
+        }
     }
 
     // ── Ghi nhận lượt nghe ────────────────────────────────────────────────────
@@ -173,6 +248,31 @@ public class MusicController {
         return ResponseEntity.ok(dtos);
     }
 
+    // ── Trang nghệ sĩ (Spotify style) ──────────────────────────────────────────
+    @GetMapping("/artist/{id}")
+    public String artistDetail(@PathVariable Long id,
+                               HttpServletRequest request,
+                               Authentication auth,
+                               Model model) {
+        CreatorProfile creator = creatorService.findById(id).orElse(null);
+        if (creator == null || !creator.isApproved()) {
+            return "redirect:/";
+        }
+
+        List<com.musicapp.models.MediaItem> mediaList = mediaService.findByCreatorIdActive(id);
+
+        model.addAttribute("artist", creator);
+        model.addAttribute("mediaList", mediaList);
+
+        Long userId = resolveUserId(auth);
+        if (userId != null) {
+            model.addAttribute("likedIds", libraryService.getLikedIds(userId));
+            model.addAttribute("searchPlaylists", playlistService.getAllUserPlaylists(userId));
+        }
+
+        return (request.getHeader("HX-Request") != null) ? "artist :: main-content" : "artist";
+    }
+
     // ── Trang chi tiết bài hát ────────────────────────────────────────────────
     @GetMapping("/track/{id}")
     public String trackDetail(@PathVariable Long id,
@@ -195,8 +295,22 @@ public class MusicController {
         if (recommendations == null || recommendations.isEmpty()) {
             recommendations = mediaService.findNewReleases(12);
         }
+        recommendations = openAiService.rerankRecommendations(item, recommendations, 12);
         model.addAttribute("recommendations", recommendations);
 
         return (request.getHeader("HX-Request") != null) ? "track :: main-content" : "track";
+    }
+
+    private List<Long> collectCreatorIds(Authentication auth, boolean isAdmin, List<Long> selectedIds) {
+        List<Long> ids = new ArrayList<>();
+        if (!isAdmin) {
+            CreatorProfile self = creatorService.findApprovedByUsername(auth.getName())
+                    .orElseThrow(() -> new IllegalArgumentException("creator_not_approved"));
+            ids.add(self.getId());
+        }
+        if (selectedIds != null) {
+            ids.addAll(selectedIds);
+        }
+        return ids;
     }
 }

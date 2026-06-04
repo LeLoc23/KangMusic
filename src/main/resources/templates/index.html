@@ -117,11 +117,27 @@
                                     </span>
                                     <span class="track-title-info">
                                         <span class="track-title-name" th:text="${s.title}">Tên bài</span>
-                                        <span class="track-title-artist" th:text="${s.artist}">Ca sĩ</span>
+                                        <span class="track-title-artist">
+                                            <th:block th:if="${#lists.isEmpty(s.creators)}" th:text="${s.artist}">Ca sĩ</th:block>
+                                            <th:block th:unless="${#lists.isEmpty(s.creators)}">
+                                                <span th:each="c, iter : ${s.creators}">
+                                                    <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                                    <span th:if="${!iter.last}">, </span>
+                                                </span>
+                                            </th:block>
+                                        </span>
                                     </span>
                                 </a>
                             </td>
-                            <td class="track-artist-cell" th:text="${s.artist}">Ca sĩ</td>
+                            <td class="track-artist-cell">
+                                <th:block th:if="${#lists.isEmpty(s.creators)}" th:text="${s.artist}">Ca sĩ</th:block>
+                                <th:block th:unless="${#lists.isEmpty(s.creators)}">
+                                    <span th:each="c, iter : ${s.creators}">
+                                        <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                        <span th:if="${!iter.last}">, </span>
+                                    </span>
+                                </th:block>
+                            </td>
                             <td>
                                 <span th:if="${s.genre != null and s.genre != ''}"
                                       class="genre-chip"
@@ -294,8 +310,333 @@
                             <div class="media-card-title">
                                 <a th:href="@{'/track/' + ${m.id}}" th:text="${m.title}">Tên bài</a>
                             </div>
-                            <div class="media-card-artist" th:text="${m.artist}">Ca sĩ</div>
+                            <div class="media-card-artist">
+                                <th:block th:if="${#lists.isEmpty(m.creators)}" th:text="${m.artist}">Ca sĩ</th:block>
+                                <th:block th:unless="${#lists.isEmpty(m.creators)}">
+                                    <span th:each="c, iter : ${m.creators}">
+                                        <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                        <span th:if="${!iter.last}">, </span>
+                                    </span>
+                                </th:block>
+                            </div>
                         </div>
+                    </div>
+                </div>
+
+                <!-- ── Section: Gợi Ý AI ────────────────── -->
+                <div class="section-block" style="margin-bottom: 32px;">
+                    <style>
+                        /* AI Recommendation embedded widget CSS */
+                        .ai-chat-container {
+                            max-width: 100%;
+                            background: linear-gradient(180deg, rgba(15, 28, 18, 0.6) 0%, rgba(12, 54, 25, 0.3) 100%);
+                            border: 1px solid rgba(30, 215, 96, 0.25);
+                            border-radius: 16px;
+                            padding: 24px;
+                            display: flex;
+                            flex-direction: column;
+                            height: 520px;
+                            position: relative;
+                            box-shadow: 0 8px 32px rgba(0,0,0,0.3);
+                            margin-top: 12px;
+                        }
+
+                        .ai-chat-header-section {
+                            margin-bottom: 16px;
+                            padding-bottom: 12px;
+                            border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+                        }
+
+                        .ai-chat-header-title {
+                            font-size: 20px;
+                            font-weight: 800;
+                            color: #fff;
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                        }
+
+                        .ai-chat-header-desc {
+                            font-size: 13px;
+                            color: #b3b3b3;
+                            margin-top: 4px;
+                            line-height: 1.4;
+                        }
+
+                        .ai-chat-log-box {
+                            flex: 1;
+                            overflow-y: auto;
+                            padding-right: 8px;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 16px;
+                            margin-bottom: 16px;
+                            scroll-behavior: smooth;
+                        }
+
+                        /* Scrollbar Styling */
+                        .ai-chat-log-box::-webkit-scrollbar {
+                            width: 6px;
+                        }
+                        .ai-chat-log-box::-webkit-scrollbar-thumb {
+                            background: rgba(255, 255, 255, 0.1);
+                            border-radius: 4px;
+                        }
+
+                        .chat-msg {
+                            display: flex;
+                            gap: 12px;
+                            max-width: 85%;
+                        }
+
+                        .chat-msg.user {
+                            align-self: flex-end;
+                            flex-direction: row-reverse;
+                        }
+
+                        .chat-msg.assistant {
+                            align-self: flex-start;
+                        }
+
+                        .msg-avatar {
+                            width: 32px;
+                            height: 32px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            flex-shrink: 0;
+                        }
+
+                        .chat-msg.user .msg-avatar {
+                            background: #1ed760;
+                            color: #000;
+                            font-weight: 700;
+                            font-size: 13px;
+                        }
+
+                        .chat-msg.assistant .msg-avatar {
+                            background: rgba(255, 255, 255, 0.08);
+                            border: 1px solid rgba(255, 255, 255, 0.15);
+                            color: #1ed760;
+                        }
+
+                        .msg-bubble {
+                            padding: 10px 14px;
+                            border-radius: 16px;
+                            font-size: 13.5px;
+                            line-height: 1.5;
+                            word-break: break-word;
+                        }
+
+                        .chat-msg.user .msg-bubble {
+                            background: #1ed760;
+                            color: #000;
+                            border-radius: 16px 16px 4px 16px;
+                            font-weight: 500;
+                        }
+
+                        .chat-msg.assistant .msg-bubble {
+                            background: #181818;
+                            border: 1px solid rgba(255, 255, 255, 0.06);
+                            color: #fff;
+                            border-radius: 16px 16px 16px 4px;
+                            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+                        }
+
+                        .ai-suggested-tracks {
+                            margin-top: 10px;
+                            display: flex;
+                            flex-direction: column;
+                            gap: 6px;
+                            background: rgba(255, 255, 255, 0.02);
+                            border-radius: 8px;
+                            padding: 6px;
+                            border: 1px solid rgba(255,255,255,0.03);
+                        }
+
+                        .suggested-track-item {
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            padding: 6px;
+                            border-radius: 6px;
+                            transition: background-color 0.2s;
+                        }
+
+                        .suggested-track-item:hover {
+                            background: rgba(255, 255, 255, 0.05);
+                        }
+
+                        .suggested-track-img {
+                            width: 36px;
+                            height: 36px;
+                            border-radius: 4px;
+                            object-fit: cover;
+                            background: #282828;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            font-size: 16px;
+                            color: rgba(255,255,255,0.4);
+                            flex-shrink: 0;
+                        }
+
+                        .suggested-track-info {
+                            flex: 1;
+                            min-width: 0;
+                        }
+
+                        .suggested-track-title {
+                            font-size: 13px;
+                            font-weight: 600;
+                            color: #fff;
+                            white-space: nowrap;
+                            overflow: hidden;
+                            text-overflow: ellipsis;
+                        }
+
+                        .suggested-track-artist {
+                            font-size: 11px;
+                            color: #b3b3b3;
+                            margin-top: 1px;
+                        }
+
+                        .suggested-track-play {
+                            width: 28px;
+                            height: 28px;
+                            border-radius: 50%;
+                            background: #fff;
+                            color: #000;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            border: none;
+                            cursor: pointer;
+                            transition: transform 0.15s, background-color 0.15s;
+                        }
+
+                        .suggested-track-play:hover {
+                            transform: scale(1.1);
+                            background: #1ed760;
+                        }
+
+                        .ai-chips-container {
+                            display: flex;
+                            gap: 6px;
+                            flex-wrap: wrap;
+                            margin-bottom: 10px;
+                            padding: 2px 0;
+                        }
+
+                        .ai-mood-chip {
+                            background: rgba(255, 255, 255, 0.04);
+                            border: 1px solid rgba(255, 255, 255, 0.1);
+                            color: #fff;
+                            font-size: 12px;
+                            font-weight: 500;
+                            padding: 6px 12px;
+                            border-radius: 20px;
+                            cursor: pointer;
+                            transition: background-color 0.2s, border-color 0.2s, transform 0.1s;
+                        }
+
+                        .ai-mood-chip:hover {
+                            background: rgba(255, 255, 255, 0.1);
+                            border-color: rgba(255, 255, 255, 0.25);
+                            transform: scale(1.02);
+                        }
+
+                        .ai-input-form-box {
+                            background: rgba(255, 255, 255, 0.03);
+                            border: 1px solid rgba(255, 255, 255, 0.08);
+                            border-radius: 24px;
+                            padding: 6px 14px;
+                            display: flex;
+                            align-items: center;
+                            gap: 10px;
+                            margin: 0;
+                        }
+
+                        .ai-input-form-box input {
+                            flex: 1;
+                            background: transparent;
+                            border: none;
+                            color: #fff;
+                            font-size: 13.5px;
+                            outline: none;
+                        }
+
+                        .ai-input-form-box button {
+                            background: #1ed760;
+                            color: #000;
+                            border: none;
+                            width: 32px;
+                            height: 32px;
+                            border-radius: 50%;
+                            display: flex;
+                            align-items: center;
+                            justify-content: center;
+                            cursor: pointer;
+                            transition: transform 0.1s, background-color 0.15s;
+                        }
+
+                        .ai-input-form-box button:hover {
+                            transform: scale(1.05);
+                            background: #1fdf64;
+                        }
+                    </style>
+
+                    <div class="ai-chat-container">
+                        <!-- Header -->
+                        <div class="ai-chat-header-section">
+                            <div class="ai-chat-header-title">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="#1ed760" class="bi bi-openai" viewBox="0 0 16 16" style="animation: spin-slow 8s linear infinite; flex-shrink: 0;">
+                                    <path d="M14.949 6.547a3.94 3.94 0 0 0-.348-3.273 4.11 4.11 0 0 0-4.4-1.934A4.1 4.1 0 0 0 8.423.2 4.15 4.15 0 0 0 6.305.086a4.1 4.1 0 0 0-1.891.948 4.04 4.04 0 0 0-1.158 1.753 4.1 4.1 0 0 0-1.563.679A4 4 0 0 0 .554 4.72a3.99 3.99 0 0 0 .502 4.731 3.94 3.94 0 0 0 .346 3.274 4.11 4.11 0 0 0 4.402 1.933c.382.425.852.764 1.377.995.526.231 1.095.35 1.67.346 1.78.002 3.358-1.132 3.901-2.804a4.1 4.1 0 0 0 1.563-.68 4 4 0 0 0 1.14-1.253 3.99 3.99 0 0 0-.506-4.716m-6.097 8.406a3.05 3.05 0 0 1-1.945-.694l.096-.054 3.23-1.838a.53.53 0 0 0 .265-.455v-4.49l1.366.778q.02.011.025.035v3.722c-.003 1.653-1.361 2.992-3.037 2.996m-6.53-2.75a2.95 2.95 0 0 1-.36-2.01l.095.057L5.29 12.09a.53.53 0 0 0 .527 0l3.949-2.246v1.555a.05.05 0 0 1-.022.041L6.473 13.3c-1.454.826-3.311.335-4.15-1.098m-.85-6.94A3.02 3.02 0 0 1 3.07 3.949v3.785a.51.51 0 0 0 .262.451l3.93 2.237-1.366.779a.05.05 0 0 1-.048 0L2.585 9.342a2.98 2.98 0 0 1-1.113-4.094zm11.216 2.571L8.747 5.576l1.362-.776a.05.05 0 0 1 .048 0l3.265 1.86a3 3 0 0 1 1.173 1.207 2.96 2.96 0 0 1-.27 3.2 3.05 3.05 0 0 1-1.36.997V8.279a.52.52 0 0 0-.276-.445m1.36-2.015-.097-.057-3.226-1.855a.53.53 0 0 0-.53 0L6.249 6.153V4.598a.04.04 0 0 1 .019-.04L9.533 2.7a3.07 3.07 0 0 1 3.257.139c.474.325.843.778 1.066 1.303.223.526.289 1.103.191 1.664zM5.503 8.575 4.139 7.8a.05.05 0 0 1-.026-.037V4.049c0-.57.166-1.127.476-1.607s.752-.864 1.275-1.105a3.08 3.08 0 0 1 .512 3.562z"/>
+                                </svg>
+                                <span>Gợi Ý Tìm Kiếm Nhạc Bằng AI</span>
+                            </div>
+                            <div class="ai-chat-header-desc">
+                                Chia sẻ tâm trạng, hoạt động hoặc gu âm nhạc để AI tìm kiếm và đề xuất danh sách bài hát phù hợp nhất.
+                            </div>
+                        </div>
+
+                        <!-- Chat Logs -->
+                        <div class="ai-chat-log-box" id="ai-chat-log">
+                            <!-- Initial Bot message -->
+                            <div class="chat-msg assistant">
+                                <div class="msg-avatar">
+                                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#1ed760" class="bi bi-openai" viewBox="0 0 16 16" style="animation: spin-slow 8s linear infinite;">
+                                        <path d="M14.949 6.547a3.94 3.94 0 0 0-.348-3.273 4.11 4.11 0 0 0-4.4-1.934A4.1 4.1 0 0 0 8.423.2 4.15 4.15 0 0 0 6.305.086a4.1 4.1 0 0 0-1.891.948 4.04 4.04 0 0 0-1.158 1.753 4.1 4.1 0 0 0-1.563.679A4 4 0 0 0 .554 4.72a3.99 3.99 0 0 0 .502 4.731 3.94 3.94 0 0 0 .346 3.274 4.11 4.11 0 0 0 4.402 1.933c.382.425.852.764 1.377.995.526.231 1.095.35 1.67.346 1.78.002 3.358-1.132 3.901-2.804a4.1 4.1 0 0 0 1.563-.68 4 4 0 0 0 1.14-1.253 3.99 3.99 0 0 0-.506-4.716m-6.097 8.406a3.05 3.05 0 0 1-1.945-.694l.096-.054 3.23-1.838a.53.53 0 0 0 .265-.455v-4.49l1.366.778q.02.011.025.035v3.722c-.003 1.653-1.361 2.992-3.037 2.996m-6.53-2.75a2.95 2.95 0 0 1-.36-2.01l.095.057L5.29 12.09a.53.53 0 0 0 .527 0l3.949-2.246v1.555a.05.05 0 0 1-.022.041L6.473 13.3c-1.454.826-3.311.335-4.15-1.098m-.85-6.94A3.02 3.02 0 0 1 3.07 3.949v3.785a.51.51 0 0 0 .262.451l3.93 2.237-1.366.779a.05.05 0 0 1-.048 0L2.585 9.342a2.98 2.98 0 0 1-1.113-4.094zm11.216 2.571L8.747 5.576l1.362-.776a.05.05 0 0 1 .048 0l3.265 1.86a3 3 0 0 1 1.173 1.207 2.96 2.96 0 0 1-.27 3.2 3.05 3.05 0 0 1-1.36.997V8.279a.52.52 0 0 0-.276-.445m1.36-2.015-.097-.057-3.226-1.855a.53.53 0 0 0-.53 0L6.249 6.153V4.598a.04.04 0 0 1 .019-.04L9.533 2.7a3.07 3.07 0 0 1 3.257.139c.474.325.843.778 1.066 1.303.223.526.289 1.103.191 1.664zM5.503 8.575 4.139 7.8a.05.05 0 0 1-.026-.037V4.049c0-.57.166-1.127.476-1.607s.752-.864 1.275-1.105a3.08 3.08 0 0 1 .512 3.562z"/>
+                                    </svg>
+                                </div>
+                                <div class="msg-bubble">
+                                    Xin chào! Tôi là Trợ lý Gợi Ý Âm Nhạc AI. 
+                                    Hãy cho tôi biết tâm trạng của bạn lúc này hoặc bạn đang muốn tìm kiếm thể loại nhạc như thế nào? 
+                                    Tôi sẽ quét thư viện bài hát và đề xuất cho bạn!
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Suggestion Mood Chips -->
+                        <div class="ai-chips-container" id="ai-suggestion-chips">
+                            <button class="ai-mood-chip" data-query="Tìm cho tôi những bài hát chill để thư giãn buổi tối">🧘‍♂️ Nhạc chill tối nay</button>
+                            <button class="ai-mood-chip" data-query="Đề xuất các bài hát năng động, tràn đầy năng lượng để tập thể dục">⚡ Năng lượng tập luyện</button>
+                            <button class="ai-mood-chip" data-query="Tôi đang buồn, hãy gợi ý những ca khúc sâu lắng, tâm trạng">💔 Nhạc buồn tâm trạng</button>
+                            <button class="ai-mood-chip" data-query="Những ca khúc Indie mộc mạc và hoài niệm">🎸 Indie mộc mạc</button>
+                            <button class="ai-mood-chip" data-query="Đề xuất nhạc Lofi không lời học tập tập trung">☕ Lofi tập trung</button>
+                            <button class="ai-mood-chip" data-query="Các bài hát nhạc Pop sôi động cho bữa tiệc quẩy">🥳 Nhạc tiệc sôi động</button>
+                        </div>
+
+                        <!-- Input Box -->
+                        <form class="ai-input-form-box" id="ai-chat-form" autocomplete="off">
+                            <input type="text" id="ai-chat-input" required placeholder="Nhập tâm trạng hoặc yêu cầu bài hát của bạn (VD: Tìm nhạc Pop buồn)...">
+                            <button type="submit" title="Gửi yêu cầu">
+                                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2.5">
+                                    <path d="M22 2L11 13"></path><path d="M22 2L15 22L11 13L2 9L22 2Z"></path>
+                                </svg>
+                            </button>
+                        </form>
                     </div>
                 </div>
 
@@ -383,7 +724,15 @@
                             <div class="media-card-title">
                                 <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài</a>
                             </div>
-                            <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                            <div class="media-card-artist">
+                                <th:block th:if="${#lists.isEmpty(item.creators)}" th:text="${item.artist}">Ca sĩ</th:block>
+                                <th:block th:unless="${#lists.isEmpty(item.creators)}">
+                                    <span th:each="c, iter : ${item.creators}">
+                                        <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                        <span th:if="${!iter.last}">, </span>
+                                    </span>
+                                </th:block>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -452,7 +801,15 @@
                         <div class="media-card-title">
                             <a th:href="@{'/track/' + ${item.id}}" th:text="${item.title}">Tên bài hát</a>
                         </div>
-                        <div class="media-card-artist" th:text="${item.artist}">Ca sĩ</div>
+                        <div class="media-card-artist">
+                            <th:block th:if="${#lists.isEmpty(item.creators)}" th:text="${item.artist}">Ca sĩ</th:block>
+                            <th:block th:unless="${#lists.isEmpty(item.creators)}">
+                                <span th:each="c, iter : ${item.creators}">
+                                    <a th:href="@{'/artist/' + ${c.id}}" th:text="${c.stageName}" style="color: inherit; text-decoration: none;" onmouseover="this.style.textDecoration='underline'" onmouseout="this.style.textDecoration='none'">Ca sĩ</a>
+                                    <span th:if="${!iter.last}">, </span>
+                                </span>
+                            </th:block>
+                        </div>
                         <div class="media-card-meta">
                             <span th:if="${item.genre}"
                                   class="genre-chip" style="font-size:10px; padding:2px 8px; margin:0;"
@@ -504,5 +861,151 @@
 
 </div>
 
+    <!-- Client-side Chat Controller Script -->
+    <script th:inline="javascript">
+        (function() {
+            function initHomeAiChat() {
+                const chatLog = document.getElementById('ai-chat-log');
+                const chatForm = document.getElementById('ai-chat-form');
+                const chatInput = document.getElementById('ai-chat-input');
+                const chips = document.querySelectorAll('.ai-mood-chip');
+                if (!chatLog || !chatForm || !chatInput) return;
+                
+                // Unbind previous listener if any (to prevent multiple event listeners on HTMX swaps)
+                if (chatForm.dataset.listenerBound) return;
+                chatForm.dataset.listenerBound = "true";
+
+                // Form Submit Listener
+                chatForm.addEventListener('submit', (e) => {
+                    e.preventDefault();
+                    const text = chatInput.value.trim();
+                    if (!text) return;
+                    chatInput.value = '';
+                    sendAiRecommendationRequest(text);
+                });
+
+                // Mood Chips Click Listener
+                chips.forEach(chip => {
+                    chip.addEventListener('click', (e) => {
+                        e.stopPropagation();
+                        const text = chip.dataset.query;
+                        if (text) {
+                            sendAiRecommendationRequest(text);
+                        }
+                    });
+                });
+
+                // Function to send search request to backend API
+                async function sendAiRecommendationRequest(queryText) {
+                    appendMessage('user', queryText);
+                    const loadingBubble = appendMessage('assistant', '<span style="color: #b3b3b3;">Đang quét thư viện và phân tích yêu cầu...</span>', true);
+
+                    try {
+                        const csrfToken = typeof getCsrfToken === 'function' ? getCsrfToken() : '';
+                        const response = await fetch('/api/ai/recommend', {
+                            method: 'POST',
+                            headers: {
+                                'Content-Type': 'application/x-www-form-urlencoded',
+                                'X-XSRF-TOKEN': csrfToken
+                            },
+                            body: new URLSearchParams({ query: queryText })
+                        });
+
+                        if (!response.ok) throw new Error('API request failed');
+                        const data = await response.json();
+                        loadingBubble.remove();
+
+                        const formattedResponse = (data.response || 'Tôi không tìm thấy bài hát nào phù hợp.').replace(/\n/g, '<br>');
+                        const assistantMsgContainer = appendMessage('assistant', formattedResponse);
+                        
+                        if (data.tracks && data.tracks.length > 0) {
+                            const tracksBox = document.createElement('div');
+                            tracksBox.className = 'ai-suggested-tracks';
+                            
+                            data.tracks.forEach(t => {
+                                const item = document.createElement('div');
+                                item.className = 'suggested-track-item';
+                                
+                                let artHtml = '';
+                                if (t.posterFilename) {
+                                    artHtml = `<img src="/stream/${encodeURIComponent(t.posterFilename)}" class="suggested-track-img" alt="cover">`;
+                                } else {
+                                    const symbol = t.type === 'VIDEO' ? 'smart_display' : 'music_note';
+                                    artHtml = `<div class="suggested-track-img"><span class="km-symbol">${symbol}</span></div>`;
+                                }
+
+                                item.innerHTML = `
+                                    ${artHtml}
+                                    <div class="suggested-track-info">
+                                        <div class="suggested-track-title">${escapeHtml(t.title)}</div>
+                                        <div class="suggested-track-artist">${escapeHtml(t.artist)}</div>
+                                    </div>
+                                    <button class="suggested-track-play media-play-btn"
+                                            data-id="${t.id}"
+                                            data-title="${escapeHtml(t.title)}"
+                                            data-artist="${escapeHtml(t.artist)}"
+                                            data-src="/stream/${encodeURIComponent(t.fileName)}"
+                                            data-type="${t.type}"
+                                            data-genre="${t.genre || ''}"
+                                            data-emotion="${t.emotionLabel || ''}"
+                                            data-lyrics="${escapeHtml(t.lyrics || '')}"
+                                            data-poster="${t.posterFilename || ''}">
+                                        <span class="km-symbol" style="font-size: 20px;">play_arrow</span>
+                                    </button>
+                                `;
+                                tracksBox.appendChild(item);
+                            });
+                            assistantMsgContainer.querySelector('.msg-bubble').appendChild(tracksBox);
+                        }
+                    } catch (err) {
+                        console.error('AI Recommendation failed:', err);
+                        if (loadingBubble) loadingBubble.remove();
+                        appendMessage('assistant', '<span style="color: #ed4245;">Xin lỗi, hệ thống AI đang quá tải hoặc gặp lỗi. Vui lòng thử lại sau.</span>');
+                    }
+                }
+
+                function appendMessage(sender, contentHtml, isRaw = false) {
+                    const msgWrapper = document.createElement('div');
+                    msgWrapper.className = `chat-msg ${sender}`;
+
+                    const avatar = document.createElement('div');
+                    avatar.className = 'msg-avatar';
+                    if (sender === 'user') {
+                        avatar.textContent = 'U';
+                    } else {
+                        avatar.innerHTML = `
+                            <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" fill="#1ed760" class="bi bi-openai" viewBox="0 0 16 16" style="animation: spin-slow 8s linear infinite;">
+                                <path d="M14.949 6.547a3.94 3.94 0 0 0-.348-3.273 4.11 4.11 0 0 0-4.4-1.934A4.1 4.1 0 0 0 8.423.2 4.15 4.15 0 0 0 6.305.086a4.1 4.1 0 0 0-1.891.948 4.04 4.04 0 0 0-1.158 1.753 4.1 4.1 0 0 0-1.563.679A4 4 0 0 0 .554 4.72a3.99 3.99 0 0 0 .502 4.731 3.94 3.94 0 0 0 .346 3.274 4.11 4.11 0 0 0 4.402 1.933c.382.425.852.764 1.377.995.526.231 1.095.35 1.67.346 1.78.002 3.358-1.132 3.901-2.804a4.1 4.1 0 0 0 1.563-.68 4 4 0 0 0 1.14-1.253(3.99 3.99 0 0 0-.506-4.716m-6.097 8.406a3.05 3.05 0 0 1-1.945-.694l.096-.054 3.23-1.838a.53.53 0 0 0 .265-.455v-4.49l1.366.778q.02.011.025.035v3.722c-.003 1.653-1.361 2.992-3.037 2.996m-6.53-2.75a2.95 2.95 0 0 1-.36-2.01l.095.057L5.29 12.09a.53.53 0 0 0 .527 0l3.949-2.246v1.555a.05.05 0 0 1-.022.041L6.473 13.3c-1.454.826-3.311.335-4.15-1.098m-.85-6.94A3.02 3.02 0 0 1 3.07 3.949v3.785a.51.51 0 0 0 .262.451l3.93 2.237-1.366.779a.05.05 0 0 1-.048 0L2.585 9.342a2.98 2.98 0 0 1-1.113-4.094zm11.216 2.571L8.747 5.576l1.362-.776a.05.05 0 0 1 .048 0l3.265 1.86a3 3 0 0 1 1.173 1.207 2.96 2.96 0 0 1-.27 3.2 3.05 3.05 0 0 1-1.36.997V8.279a.52.52 0 0 0-.276-.445m1.36-2.015-.097-.057-3.226-1.855a.53.53 0 0 0-.53 0L6.249 6.153V4.598a.04.04 0 0 1 .019-.04L9.533 2.7a3.07 3.07 0 0 1 3.257.139c.474.325.843.778 1.066 1.303.223.526.289 1.103.191 1.664zM5.503 8.575 4.139 7.8a.05.05 0 0 1-.026-.037V4.049c0-.57.166-1.127.476-1.607s.752-.864 1.275-1.105a3.08 3.08 0 0 1 .512 3.562z"/>
+                            </svg>`;
+                    }
+
+                    const bubble = document.createElement('div');
+                    bubble.className = 'msg-bubble';
+                    bubble.innerHTML = contentHtml;
+
+                    msgWrapper.appendChild(avatar);
+                    msgWrapper.appendChild(bubble);
+                    chatLog.appendChild(msgWrapper);
+                    chatLog.scrollTop = chatLog.scrollHeight;
+                    return msgWrapper;
+                }
+
+                function escapeHtml(text) {
+                    if (!text) return '';
+                    return text
+                        .replace(/&/g, "&amp;")
+                        .replace(/</g, "&lt;")
+                        .replace(/>/g, "&gt;")
+                        .replace(/"/g, "&quot;")
+                        .replace(/'/g, "&#039;");
+                }
+            }
+            
+            // Run immediately in case script is loaded/evaluated dynamically (e.g. HTMX)
+            initHomeAiChat();
+            // Also register for DOMContentLoaded in case of direct page load
+            document.addEventListener('DOMContentLoaded', initHomeAiChat);
+        })();
+    </script>
 </body>
 </html>

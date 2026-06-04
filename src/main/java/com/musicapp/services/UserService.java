@@ -16,7 +16,7 @@ import java.util.Set;
 @Transactional
 public class UserService {
 
-    private static final Set<String> ALLOWED_ROLES = Set.of("ROLE_USER", "ROLE_ADMIN");
+    private static final Set<String> ALLOWED_ROLES = Set.of("ROLE_USER", "ROLE_CREATOR", "ROLE_ADMIN");
     // MAJOR-3 FIX: Match the stronger pattern in AuthService
     private static final String PASSWORD_PATTERN = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':,./<>?]).{8,}$";
 
@@ -67,6 +67,13 @@ public class UserService {
         }
 
         user.setPassword(passwordEncoder.encode(newRaw));
+        userRepository.save(user);
+    }
+
+    public void updateProfile(String username, String fullName, String phoneNumber) {
+        User user = getByUsername(username);
+        user.setFullName(fullName);
+        user.setPhoneNumber(phoneNumber);
         userRepository.save(user);
     }
 

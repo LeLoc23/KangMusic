@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Sửa bài hát - KangMusic')}"></head>
+<body hx-boost="false">
+
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+
+        <main class="content-area" id="main-content">
+            <div class="form-container">
+                <a th:href="${isAdminUpload ? '/admin' : '/creator'}" class="form-back-btn">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="currentColor"><path d="M20 11H7.83l5.59-5.59L12 4l-8 8 8 8 1.41-1.41L7.83 13H20v-2z"/></svg>
+                    Quay lại
+                </a>
+
+                <h2>Sửa Bài Hát / Video</h2>
+                <div th:if="${param.error}" class="alert-error">Không thể cập nhật bài hát. Vui lòng kiểm tra lại thông tin.</div>
+
+                <form th:action="@{'/media/' + ${media.id} + '/edit'}" method="post" enctype="multipart/form-data">
+                    <label>Tên bài hát / video <span style="color:red">*</span></label>
+                    <input type="text" name="title" required th:value="${media.title}">
+
+                    <div th:if="${isAdminUpload}">
+                        <label>Ca sĩ / Nghệ sĩ</label>
+                        <input type="text" name="artist" th:value="${media.artist}" placeholder="Nhập thủ công nếu chưa có Creator/Singer">
+                    </div>
+                    <div th:unless="${isAdminUpload}">
+                        <label>Ca sĩ / Nghệ sĩ</label>
+                        <input type="hidden" name="artist" th:value="${currentCreator != null ? currentCreator.stageName : media.artist}">
+                        <div style="padding:10px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; margin-bottom:16px;"
+                             th:text="${currentCreator != null ? currentCreator.stageName : media.artist}">Creator/Singer</div>
+                    </div>
+
+                    <label>Creator/Singer trình bày hoặc feat</label>
+                    <select name="creatorIds" multiple size="5">
+                        <option th:each="creator : ${approvedCreators}"
+                                th:if="${isAdminUpload or currentCreator == null or creator.id != currentCreator.id}"
+                                th:value="${creator.id}"
+                                th:selected="${#lists.contains(media.creators.![id], creator.id)}"
+                                th:text="${creator.stageName + ' - @' + creator.user.username}">Singer</option>
+                    </select>
+
+                    <label>Ảnh bìa mới <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
+                    <input type="file" name="posterFile" accept="image/*">
+
+                    <label>Loại nội dung</label>
+                    <select name="type">
+                        <option value="AUDIO" th:selected="${media.type.name() == 'AUDIO'}">Bài hát (Audio)</option>
+                        <option value="VIDEO" th:selected="${media.type.name() == 'VIDEO'}">Video Clip</option>
+                    </select>
+
+                    <label>Thời lượng (giây)</label>
+                    <input type="text" name="durationSeconds" th:value="${media.durationSeconds}" placeholder="VD: 210">
+
+                    <label>Thể loại nhạc</label>
+                    <select name="genre">
+                        <option value="" th:selected="${media.genre == null or media.genre == ''}">-- Chưa phân loại --</option>
+                        <option value="VIET_POP" th:selected="${media.genre == 'VIET_POP'}">Nhạc Việt Pop</option>
+                        <option value="RELAX" th:selected="${media.genre == 'RELAX'}">Thư giãn</option>
+                        <option value="PARTY" th:selected="${media.genre == 'PARTY'}">Tiệc tùng</option>
+                        <option value="CHILL" th:selected="${media.genre == 'CHILL'}">Chill</option>
+                        <option value="SAD" th:selected="${media.genre == 'SAD'}">Buồn</option>
+                        <option value="ENERGETIC" th:selected="${media.genre == 'ENERGETIC'}">Năng lượng</option>
+                        <option value="INDIE" th:selected="${media.genre == 'INDIE'}">Indie</option>
+                        <option value="LOFI" th:selected="${media.genre == 'LOFI'}">Lo-fi</option>
+                    </select>
+
+                    <label>Album</label>
+                    <input type="text" name="album" th:value="${media.album}" placeholder="Tên album...">
+
+                    <label>Nhãn cảm xúc</label>
+                    <input type="text" name="emotionLabel" th:value="${media.emotionLabel}" placeholder="VD: Buồn, Sôi động, Chill...">
+
+                    <label>Lời bài hát</label>
+                    <textarea name="lyrics" rows="7" th:text="${media.lyrics}" placeholder="Nhập lời bài hát..."></textarea>
+
+                    <button type="submit">Lưu thay đổi</button>
+                </form>
+            </div>
+            <div style="height: 100px;"></div>
+        </main>
+
+        <div th:replace="~{fragments :: right-sidebar}"></div>
+    </div>
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
+</body>
+</html>

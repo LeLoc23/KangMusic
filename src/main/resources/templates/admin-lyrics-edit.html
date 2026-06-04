@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Chỉnh Sửa Lyrics - ' + ${song.title})}"></head>
+<body hx-boost="false">
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+        
+        <main class="content-area" id="main-content">
+            <div class="admin-container">
+                <div class="admin-back-row">
+                    <a href="/admin" class="btn btn-back">← Quay lại Trang Quản Trị</a>
+                </div>
+
+                <div class="lyrics-header-card">
+                    <div class="lyrics-song-info">
+                        <h1 class="admin-header" th:text="'📝 Quản Lý Lời Bài Hát: ' + ${song.title}">Lyrics</h1>
+                        <p class="text-muted" th:text="${song.artist} + ' • ' + ${song.album != null ? song.album : 'Single'}"></p>
+                    </div>
+                    
+                    <div class="lyrics-status-box">
+                        <span class="status-label">Trạng thái AI:</span>
+                        <span id="lyrics-status-badge" th:class="'status-badge status-' + ${song.lyricsStatus.name()}" th:text="${song.lyricsStatus.name()}">NONE</span>
+                        
+                        <form th:action="@{'/admin/songs/' + ${song.id} + '/lyrics/generate'}" method="post" style="display:inline-block; margin-left:10px;">
+                            <button type="submit" id="btn-generate-ai" class="btn btn-success" th:disabled="${song.lyricsStatus.name() == 'PROCESSING'}">
+                                🤖 Sinh bằng AI (Whisper)
+                            </button>
+                        </form>
+                    </div>
+                </div>
+
+                <!-- Alert messages -->
+                <div th:if="${param.success}" class="alert alert-success">Lưu lời bài hát thành công!</div>
+                <div th:if="${param.error}" class="alert alert-danger">Có lỗi xảy ra khi lưu!</div>
+                <div th:if="${param.generating}" class="alert alert-info" id="generating-alert">Tự động sinh lời bằng AI đang chạy ngầm. Trang sẽ tự động tải lại khi hoàn thành...</div>
+
+                <div class="admin-section">
+                    <h3 style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
+                        <span>Phân đoạn thời gian câu hát</span>
+                        <button type="button" class="btn btn-success" onclick="addNewRow()" style="font-size:13px; padding: 6px 12px;">+ Thêm dòng mới</button>
+                    </h3>
+                    
+                    <form th:action="@{'/admin/songs/' + ${song.id} + '/lyrics/save'}" method="post" id="lyricsForm" onsubmit="return prepareSubmit(event)">
+                        <input type="hidden" name="lyricsJson" id="hiddenLyricsJson">
+                        <textarea name="lyricsText" id="hiddenLyricsText" style="display:none;"></textarea>
+
+                        <div class="table-responsive">
+                            <table id="lyrics-table">
+                                <thead>
+                                    <tr>
+                                        <th style="width: 100px;">Bắt đầu (s)</th>
+                                        <th style="width: 100px;">Kết thúc (s)</th>
+                                        <th>Câu hát / Phân đoạn</th>
+                                        <th style="width: 80px; text-align:center;">Thao tác</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="lyrics-tbody">
+                                    <!-- Rows will be injected here by Javascript -->
+                                </tbody>
+                            </table>
+                        </div>
+
+                        <div class="form-actions" style="margin-top:20px; display:flex; gap:10px; justify-content:flex-end;">
+                            <a href="/admin" class="btn btn-secondary">Hủy bỏ</a>
+                            <button type="submit" class="btn btn-success" style="padding: 10px 24px; font-weight:bold;">💾 Lưu Thay Đổi</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+            <div style="height: 100px;"></div>
+        </main>
+        
+        <div th:replace="~{fragments :: right-sidebar}"></div>
+    </div>
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
+<style>
+/* Custom admin lyrics edit styles */
+.lyrics-header-card {
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    padding: 20px;
+    margin-bottom: 25px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+    gap: 15px;
+}
+.lyrics-song-info h1 {
+    margin: 0 0 5px 0;
+    font-size: 22px;
+}
+.lyrics-status-box {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+.status-label {
+    font-size: 14px;
+    color: var(--sp-text-muted, #b3b3b3);
+}
+.status-badge {
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: bold;
+    text-transform: uppercase;
+}
+.status-NONE { background: #555; color: #fff; }
+.status-PROCESSING { background: #f0ad4e; color: #000; animation: pulse 1.5s infinite; }
+.status-READY { background: #1ed760; color: #000; }
+.status-FAILED { background: #d9534f; color: #fff; }
+.status-MANUAL_EDITED { background: #0275d8; color: #fff; }
+
+@keyframes pulse {
+    0% { opacity: 0.6; }
+    50% { opacity: 1; }
+    100% { opacity: 0.6; }
+}
+
+.table-responsive table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.table-responsive th, .table-responsive td {
+    padding: 10px;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+}
+.input-time {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 6px;
+    border-radius: 4px;
+    width: 80px;
+    text-align: center;
+}
+.input-line {
+    background: rgba(0,0,0,0.3);
+    border: 1px solid rgba(255,255,255,0.1);
+    color: #fff;
+    padding: 6px 12px;
+    border-radius: 4px;
+    width: 100%;
+}
+.input-time:focus, .input-line:focus {
+    border-color: #1ed760;
+    outline: none;
+}
+.btn-delete-row {
+    background: transparent;
+    border: none;
+    color: var(--sp-text-muted, #b3b3b3);
+    cursor: pointer;
+    font-size: 18px;
+    transition: color 0.2s;
+}
+.btn-delete-row:hover {
+    color: #ff5f56;
+}
+.alert {
+    padding: 12px 20px;
+    border-radius: 4px;
+    margin-bottom: 20px;
+}
+.alert-success { background-color: rgba(30, 215, 96, 0.2); border: 1px solid #1ed760; color: #1ed760; }
+.alert-danger { background-color: rgba(217, 83, 79, 0.2); border: 1px solid #d9534f; color: #d9534f; }
+.alert-info { background-color: rgba(91, 192, 222, 0.2); border: 1px solid #5bc0de; color: #5bc0de; }
+</style>
+
+<script th:inline="javascript">
+/*<![CDATA[*/
+    const initialLyrics = /*[[${lyricsJson}]]*/ '[]';
+    const songId = /*[[${song.id}]]*/ 0;
+    let lyricsData = [];
+
+    try {
+        lyricsData = JSON.parse(initialLyrics);
+    } catch(e) {
+        console.error("Failed to parse initial lyrics json:", e);
+        lyricsData = [];
+    }
+
+    document.addEventListener("DOMContentLoaded", () => {
+        renderTable();
+        checkPollingStatus();
+    });
+
+    function renderTable() {
+        const tbody = document.getElementById("lyrics-tbody");
+        tbody.innerHTML = "";
+
+        if (lyricsData.length === 0) {
+            tbody.innerHTML = `<tr><td colspan="4" style="text-align:center; padding: 20px; color: #888;">Chưa có lời hoặc phân đoạn. Hãy thêm mới hoặc nhấn nút Sinh bằng AI.</td></tr>`;
+            return;
+        }
+
+        lyricsData.forEach((seg, index) => {
+            const tr = document.createElement("tr");
+            tr.innerHTML = `
+                <td>
+                    <input type="number" step="0.01" min="0" class="input-time start-time-input" value="${seg.start.toFixed(2)}" onchange="updateVal(${index}, 'start', this.value)">
+                </td>
+                <td>
+                    <input type="number" step="0.01" min="0" class="input-time end-time-input" value="${seg.end.toFixed(2)}" onchange="updateVal(${index}, 'end', this.value)">
+                </td>
+                <td>
+                    <input type="text" class="input-line line-input" value="${escapeHtml(seg.line)}" onchange="updateVal(${index}, 'line', this.value)">
+                </td>
+                <td style="text-align:center;">
+                    <button type="button" class="btn-delete-row" onclick="deleteRow(${index})" title="Xóa dòng">✕</button>
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    }
+
+    function escapeHtml(text) {
+        if (!text) return "";
+        return text
+            .replace(/&/g, "&amp;")
+            .replace(/</g, "&lt;")
+            .replace(/>/g, "&gt;")
+            .replace(/"/g, "&quot;")
+            .replace(/'/g, "&#039;");
+    }
+
+    function updateVal(index, field, value) {
+        if (field === 'start' || field === 'end') {
+            lyricsData[index][field] = parseFloat(value) || 0;
+        } else {
+            lyricsData[index][field] = value;
+        }
+    }
+
+    function deleteRow(index) {
+        lyricsData.splice(index, 1);
+        renderTable();
+    }
+
+    function addNewRow() {
+        let lastEnd = 0;
+        if (lyricsData.length > 0) {
+            lastEnd = lyricsData[lyricsData.length - 1].end;
+        }
+        lyricsData.push({
+            start: lastEnd + 1,
+            end: lastEnd + 5,
+            line: ""
+        });
+        renderTable();
+    }
+
+    function prepareSubmit(event) {
+        // Validate
+        for (let i = 0; i < lyricsData.length; i++) {
+            const seg = lyricsData[i];
+            if (seg.start > seg.end) {
+                alert(`Lỗi dòng số ${i + 1}: Thời gian bắt đầu (${seg.start}s) không thể lớn hơn thời gian kết thúc (${seg.end}s)!`);
+                event.preventDefault();
+                return false;
+            }
+        }
+
+        // Sort by start time just to keep it clean
+        lyricsData.sort((a, b) => a.start - b.start);
+
+        const jsonStr = JSON.stringify(lyricsData);
+        document.getElementById("hiddenLyricsJson").value = jsonStr;
+
+        const textStr = lyricsData.map(d => d.line).join("\n");
+        document.getElementById("hiddenLyricsText").value = textStr;
+
+        return true;
+    }
+
+    // Polling Status Logic for AI Whisper
+    function checkPollingStatus() {
+        const badge = document.getElementById("lyrics-status-badge");
+        if (badge && badge.textContent === "PROCESSING") {
+            const pollInterval = setInterval(() => {
+                fetch(`/api/songs/${songId}/lyrics/status`)
+                    .then(res => res.json())
+                    .then(data => {
+                        console.log("Polled lyrics status:", data.status);
+                        if (data.status !== "PROCESSING") {
+                            clearInterval(pollInterval);
+                            // Reload to get updated lyrics segments
+                            window.location.reload();
+                        }
+                    })
+                    .catch(err => {
+                        console.error("Error polling lyrics status:", err);
+                    });
+            }, 2000);
+        }
+    }
+/*]]>*/
+</script>
+</body>
+</html>

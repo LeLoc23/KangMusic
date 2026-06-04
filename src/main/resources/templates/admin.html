@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
 <head th:replace="~{fragments :: head('Quản Trị - KangMusic')}"></head>
 <body hx-boost="false">
@@ -16,6 +16,86 @@
                 </div>
 
                 <h1 class="admin-header">🛠️ Bảng Điều Khiển Admin</h1>
+
+                <!-- Creator Requests Section -->
+                <div class="admin-section table-responsive">
+                    <h3>🎤 Duyệt Creator/Singer</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Nghệ danh</th>
+                                <th class="hide-mobile">User</th>
+                                <th class="hide-mobile">Giới thiệu</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="req : ${creatorRequests}">
+                                <td th:text="${req.id}">1</td>
+                                <td th:text="${req.stageName}">Singer</td>
+                                <td class="hide-mobile" th:text="${req.user.username}">user</td>
+                                <td class="hide-mobile" th:text="${req.bio}">bio</td>
+                                <td>
+                                    <div class="action-btn-group">
+                                        <form th:action="@{/admin/creator/approve}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${req.id}">
+                                            <button type="submit" class="btn btn-success">Duyệt</button>
+                                        </form>
+                                        <form th:action="@{/admin/creator/reject}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${req.id}">
+                                            <input type="hidden" name="reason" value="Yêu cầu chưa phù hợp">
+                                            <button type="submit" class="btn btn-warning">Từ chối</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(creatorRequests)}">
+                                <td colspan="5" style="text-align:center; color:var(--sp-text-muted); padding:20px;">Không có yêu cầu Creator/Singer mới.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+                <!-- Pending Media Section -->
+                <div class="admin-section table-responsive">
+                    <h3>✅ Kiểm duyệt bài hát/video</h3>
+                    <table>
+                        <thead>
+                            <tr>
+                                <th>ID</th>
+                                <th>Tên bài</th>
+                                <th class="hide-mobile">Ca sĩ</th>
+                                <th class="hide-mobile">Album</th>
+                                <th>Thao tác</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr th:each="item : ${pendingMedia}">
+                                <td th:text="${item.id}">1</td>
+                                <td th:text="${item.title}">Bài hát</td>
+                                <td class="hide-mobile" th:text="${item.artist}">Artist</td>
+                                <td class="hide-mobile" th:text="${item.album != null ? item.album : '-'}">Album</td>
+                                <td>
+                                    <div class="action-btn-group">
+                                        <a th:href="@{'/media/' + ${item.id} + '/edit'}" class="btn btn-warning" style="text-decoration:none;">Xem/Sửa</a>
+                                        <form th:action="@{/admin/media/approve}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${item.id}">
+                                            <button type="submit" class="btn btn-success">Duyệt</button>
+                                        </form>
+                                        <form th:action="@{/admin/media/reject}" method="post" class="action-form">
+                                            <input type="hidden" name="id" th:value="${item.id}">
+                                            <button type="submit" class="btn btn-warning">Từ chối</button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <tr th:if="${#lists.isEmpty(pendingMedia)}">
+                                <td colspan="5" style="text-align:center; color:var(--sp-text-muted); padding:20px;">Không có media đang chờ duyệt.</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
 
                 <!-- Users Section -->
                 <div class="admin-section table-responsive">
@@ -44,6 +124,7 @@
                                             <input type="hidden" name="id" th:value="${user.id}">
                                             <select name="newRole" onchange="this.form.submit()">
                                                 <option value="ROLE_USER" th:selected="${user.role == 'ROLE_USER'}">User</option>
+                                                <option value="ROLE_CREATOR" th:selected="${user.role == 'ROLE_CREATOR'}">Creator</option>
                                                 <option value="ROLE_ADMIN" th:selected="${user.role == 'ROLE_ADMIN'}">Admin</option>
                                             </select>
                                         </form>
@@ -94,6 +175,7 @@
                                 <th>Tên Bài Hát</th>
                                 <th class="hide-mobile">Ca sĩ</th>
                                 <th class="hide-mobile">Loại</th>
+                                <th class="hide-mobile">Trạng thái</th>
                                 <th class="hide-mobile">Thời lượng</th>
                                 <th>Thao tác</th>
                             </tr>
@@ -112,6 +194,12 @@
                                     <span th:unless="${item.type.name() == 'VIDEO'}" class="badge-audio" style="padding: 2px 6px; border-radius: 4px; font-size: 11px; color:#000;">AUDIO</span>
                                 </td>
 
+                                <td class="hide-mobile">
+                                    <span th:if="${item.approved}" class="status-active">Đã duyệt</span>
+                                    <span th:if="${item.pendingApproval}" class="status-locked">Chờ duyệt</span>
+                                    <span th:if="${item.rejected}" class="status-locked">Từ chối</span>
+                                </td>
+
                                 <!-- Duration column -->
                                 <td class="hide-mobile">
                                     <span th:if="${item.durationSeconds != null}"
@@ -121,11 +209,15 @@
                                 </td>
                                 
                                 <td>
-                                    <form th:action="@{/admin/media/delete}" method="post" class="action-form"
-                                          onsubmit="return confirm('Xóa bài hát này khỏi Database?');">
-                                        <input type="hidden" name="id" th:value="${item.id}">
-                                        <button type="submit" class="btn btn-delete">Xóa</button>
-                                    </form>
+                                    <div class="action-btn-group">
+                                        <a th:href="@{'/media/' + ${item.id} + '/edit'}" class="btn btn-warning" style="text-decoration:none;">Sửa</a>
+                                        <a th:href="@{'/admin/songs/' + ${item.id} + '/lyrics/edit'}" class="btn btn-success" style="text-decoration:none; background-color:#1ed760; color:#000; padding:6px 12px; border-radius:4px;">Lyrics</a>
+                                        <form th:action="@{/admin/media/delete}" method="post" class="action-form"
+                                              onsubmit="return confirm('Xóa bài hát này khỏi Database?');">
+                                            <input type="hidden" name="id" th:value="${item.id}">
+                                            <button type="submit" class="btn btn-delete">Xóa</button>
+                                        </form>
+                                    </div>
                                 </td>
                             </tr>
                         </tbody>
@@ -145,4 +237,3 @@
 
 </body>
 </html>
-

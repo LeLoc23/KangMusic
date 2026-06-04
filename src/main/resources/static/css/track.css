@@ -58,7 +58,7 @@
 .track-hero-duration { font-size: 13px; color: #b3b3b3; }
 
 /* Action buttons */
-.track-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; }
+.track-actions { display: flex; align-items: center; gap: 16px; margin-bottom: 32px; position: relative; z-index: 5; }
 .track-play-btn-big {
     display: inline-flex; align-items: center; gap: 10px;
     background: var(--sp-white); color: #000;
@@ -75,6 +75,27 @@
 }
 .track-action-icon-btn:hover { color: #fff; transform: scale(1.1); }
 .track-action-icon-btn.liked { color: var(--sp-white) !important; text-shadow: 0 0 10px rgba(255,255,255,0.5); }
+
+.track-action-ai-btn {
+    display: inline-flex;
+    align-items: center;
+    background: rgba(255, 255, 255, 0.08);
+    color: #fff;
+    font-weight: 700;
+    font-size: 13.5px;
+    padding: 8px 16px;
+    border-radius: 20px;
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    cursor: pointer;
+    transition: background 0.2s, transform 0.1s, border-color 0.2s;
+    height: 38px;
+}
+.track-action-ai-btn:hover {
+    background: rgba(255, 255, 255, 0.16);
+    border-color: rgba(255, 255, 255, 0.35);
+    transform: scale(1.04);
+}
+
 
 /* Track info card */
 .track-info-card {

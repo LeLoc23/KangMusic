@@ -21,7 +21,7 @@ public class MediaComment {
     @JoinColumn(name = "media_item_id", nullable = false)
     private MediaItem mediaItem;
 
-    @Column(nullable = false, length = 1000)
+    @Column(nullable = false, length = 1000, columnDefinition = "NVARCHAR(1000)")
     private String content;
 
     @Column(name = "timestamp_seconds")

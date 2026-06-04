@@ -21,7 +21,9 @@
 .form-container label:first-of-type { margin-top: 0; }
 
 .form-container input[type="text"],
+.form-container input[type="tel"],
 .form-container select,
+.form-container textarea,
 .form-container input[type="file"] {
   width: 100%;
   padding: 14px 16px;
@@ -41,6 +43,11 @@
 }
 .form-container input::placeholder { color: var(--sp-text-dim); }
 .form-container select { appearance: none; cursor: pointer; }
+.form-container select[multiple] {
+  appearance: auto;
+  min-height: 132px;
+  cursor: default;
+}
 .form-container select option { background: var(--sp-card); }
 
 .form-container input[type="file"] {

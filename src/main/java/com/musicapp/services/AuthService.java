@@ -12,22 +12,18 @@ import org.springframework.util.DigestUtils;
 import java.time.LocalDateTime;
 import java.nio.charset.StandardCharsets;
 import java.util.Optional;
-import java.util.UUID;
 
 @Service
 @Transactional
 public class AuthService {
 
-    // MAJOR-3 FIX: Stronger policy — 8+ chars, 1 uppercase, 1 digit, 1 special char
     private static final String PASSWORD_PATTERN = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':,./<>?]).{8,}$";
-    /** CRIT-4 FIX: Reset tokens expire after 30 minutes */
     private static final int RESET_TOKEN_EXPIRY_MINUTES = 30;
 
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final EmailService emailService;
 
-    /** S10 FIX: Injected base URL — no more Host-header injection risk. */
     @Value("${app.base-url}")
     private String configuredBaseUrl;
 
@@ -39,16 +35,13 @@ public class AuthService {
         this.emailService = emailService;
     }
 
-    /**
-     * Registers a new user. Throws exceptions for validation failures.
-     */
-    public void registerUser(String username, String password, String confirmPassword,
-                             String email, String fullName) {
+    public User registerUser(String username, String password, String confirmPassword,
+                             String email, String fullName, String phoneNumber) {
 
         if (username.trim().isEmpty() || password.trim().isEmpty() || email.trim().isEmpty()) {
             throw new IllegalArgumentException("blank_fields");
         }
-        if (username.length() > 50 || email.length() > 100) {   // I5 FIX
+        if (username.length() > 50 || email.length() > 100) {
             throw new IllegalArgumentException("input_too_long");
         }
         if (userRepository.findByUsername(username).isPresent()) {
@@ -65,31 +58,62 @@ public class AuthService {
         }
 
         User newUser = new User(username, passwordEncoder.encode(password), email, fullName, "ROLE_USER");
+        newUser.setPhoneNumber(phoneNumber);
+        newUser.setEmailVerified(false);
         userRepository.save(newUser);
+
+        sendEmailVerification(newUser);
+        return newUser;
     }
 
-    /**
-     * S10 FIX: Uses injected app.base-url — no baseUrl parameter needed.
-     * S7 FIX: Token is hashed with SHA-256 before storing in DB.
-     *         The raw token is sent in the email. On reset, the submitted
-     *         token is hashed and compared against the stored hash.
-     * M6 FIX: Always shows neutral response regardless of email existence.
-     */
+    public void sendEmailVerification(User user) {
+        int codeVal = 100000 + new java.security.SecureRandom().nextInt(900000);
+        String code = String.valueOf(codeVal);
+        user.setEmailVerificationCode(code);
+        user.setEmailVerificationExpiry(LocalDateTime.now().plusHours(24));
+        userRepository.save(user);
+
+        String subject = "Mã xác thực tài khoản - KangMusic";
+        String text = "Xin chào " + user.getUsername() + ",\n\n"
+                + "Cảm ơn bạn đã đăng ký tài khoản tại KangMusic.\n"
+                + "Mã xác thực tài khoản của bạn là: " + code + "\n"
+                + "Mã này có hiệu lực trong vòng 24 giờ.\n\n"
+                + "Trân trọng,\nĐội ngũ KangMusic.";
+
+        emailService.sendEmail(user.getEmail(), subject, text);
+    }
+
+    public boolean verifyEmail(String username, String code) {
+        Optional<User> opt = userRepository.findByUsername(username);
+        if (opt.isEmpty()) return false;
+        User user = opt.get();
+        if (user.isEmailVerified()) return true;
+        if (code != null && code.equals(user.getEmailVerificationCode())
+                && user.getEmailVerificationExpiry() != null
+                && LocalDateTime.now().isBefore(user.getEmailVerificationExpiry())) {
+            user.setEmailVerified(true);
+            user.setEmailVerificationCode(null);
+            user.setEmailVerificationExpiry(null);
+            userRepository.save(user);
+            return true;
+        }
+        return false;
+    }
+
     public void processForgotPassword(String email) {
         userRepository.findByEmail(email).ifPresent(user -> {
-            String rawToken    = UUID.randomUUID().toString();
-            String hashedToken = DigestUtils.md5DigestAsHex(rawToken.getBytes(StandardCharsets.UTF_8));
+            int codeVal = 100000 + new java.security.SecureRandom().nextInt(900000);
+            String rawCode = String.valueOf(codeVal);
+            String hashedToken = DigestUtils.md5DigestAsHex(rawCode.getBytes(StandardCharsets.UTF_8));
             user.setResetToken(hashedToken);
             user.setResetTokenExpiry(LocalDateTime.now().plusMinutes(RESET_TOKEN_EXPIRY_MINUTES));
             userRepository.save(user);
 
-            // Email contains raw token; DB stores only the hash
-            String resetLink = configuredBaseUrl + "/reset-password?token=" + rawToken;
-            String subject = "Hỗ trợ khôi phục mật khẩu - KangMusic";
+            // Email contains 6-digit code
+            String subject = "Mã xác thực khôi phục mật khẩu - KangMusic";
             String text = "Xin chào " + user.getUsername() + ",\n\n"
-                    + "Bạn đã yêu cầu đặt lại mật khẩu. Link có hiệu lực trong "
-                    + RESET_TOKEN_EXPIRY_MINUTES + " phút:\n\n"
-                    + resetLink + "\n\n"
+                    + "Mã xác thực để đặt lại mật khẩu của bạn là: " + rawCode + "\n"
+                    + "Mã này có hiệu lực trong " + RESET_TOKEN_EXPIRY_MINUTES + " phút.\n\n"
                     + "Nếu bạn không yêu cầu, vui lòng bỏ qua email này. Tài khoản của bạn vẫn an toàn.\n\n"
                     + "Trân trọng,\nĐội ngũ KangMusic.";
 
@@ -97,23 +121,18 @@ public class AuthService {
         });
     }
 
-    /**
-     * S7 FIX: Hashes submitted token before looking it up in DB.
-     * DB stores hash; email contains raw token.
-     */
-    public Optional<User> findValidResetToken(String rawToken) {
-        String hashedToken = DigestUtils.md5DigestAsHex(rawToken.getBytes(StandardCharsets.UTF_8));
-        return userRepository.findByResetToken(hashedToken)
-                .filter(user -> user.getResetTokenExpiry() != null
+    public Optional<User> findValidResetCode(String email, String rawCode) {
+        if (email == null || rawCode == null || rawCode.length() != 6) return Optional.empty();
+        String hashedCode = DigestUtils.md5DigestAsHex(rawCode.getBytes(StandardCharsets.UTF_8));
+        return userRepository.findByEmail(email)
+                .filter(user -> hashedCode.equals(user.getResetToken())
+                        && user.getResetTokenExpiry() != null
                         && LocalDateTime.now().isBefore(user.getResetTokenExpiry()));
     }
 
-    /**
-     * Resets the user's password. Token is invalidated after use.
-     */
-    public void processResetPassword(String token, String password, String confirmPassword) {
-        User user = findValidResetToken(token)
-                .orElseThrow(() -> new IllegalArgumentException("invalid_token"));
+    public String processResetPassword(String email, String code, String password, String confirmPassword) {
+        User user = findValidResetCode(email, code)
+                .orElseThrow(() -> new IllegalArgumentException("invalid_code"));
 
         if (!password.matches(PASSWORD_PATTERN)) {
             throw new WeakPasswordException("weak_pass");
@@ -126,5 +145,6 @@ public class AuthService {
         user.setResetToken(null);
         user.setResetTokenExpiry(null);
         userRepository.save(user);
+        return user.getUsername();
     }
 }

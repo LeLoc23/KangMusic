@@ -1,22 +1,6 @@
 <!DOCTYPE html>
 <html xmlns:th="http://www.thymeleaf.org">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <meta name="_csrf" th:content="${_csrf != null ? _csrf.token : ''}"/>
-    <meta name="_csrf_header" th:content="${_csrf != null ? _csrf.headerName : ''}"/>
-    <title>Hồ Sơ Cá Nhân - KangMusic</title>
-    <link rel="stylesheet" th:href="@{/css/common.css}">
-    <link rel="stylesheet" th:href="@{/css/player.css(v=6)}">
-    <link rel="stylesheet" th:href="@{/css/playlist.css}">
-    <link rel="stylesheet" th:href="@{/css/modal.css}">
-    <link rel="stylesheet" th:href="@{/css/track.css}">
-    <link rel="stylesheet" th:href="@{/css/index.css}">
-    <link rel="stylesheet" th:href="@{/css/auth.css}">
-    <link rel="stylesheet" th:href="@{/css/add.css}">
-    <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer th:src="@{/js/app.js(v=16)}"></script>
-</head>
+<head th:replace="~{fragments :: head('Hồ sơ cá nhân - KangMusic')}"></head>
 <body hx-boost="false">
 
 <div class="page-wrapper">
@@ -24,42 +8,88 @@
     <div class="main-layout">
         <div th:replace="~{fragments :: library-sidebar}"></div>
 
-        <!-- MAIN CONTENT (HTMX target) -->
         <main class="content-area" id="main-content">
             <div style="padding: 40px 24px;">
-                <div class="auth-wrapper" style="max-width:520px; margin: 0 auto;">
+                <div class="auth-wrapper" style="max-width:720px; margin: 0 auto;">
                     <br>
                     <div class="auth-container">
-                        <h2>👤 Hồ Sơ Của Bạn</h2>
+                        <h2>Hồ sơ của bạn</h2>
 
-                        <div th:if="${param.success}" class="auth-alert auth-alert-success">
-                            Đổi mật khẩu thành công!
-                        </div>
-                        <div th:if="${param.error}" class="auth-alert auth-alert-error">
-                            <span th:if="${param.error[0] == 'old_wrong'}">Mật khẩu cũ không chính xác!</span>
-                            <span th:if="${param.error[0] == 'weak_pass'}">Mật khẩu mới phải >= 6 ký tự và có chữ hoa!</span>
-                            <span th:if="${param.error[0] == 'mismatch'}">Mật khẩu nhập lại không khớp!</span>
+                        <div th:if="${param.success != null}" class="auth-alert auth-alert-success">Đổi mật khẩu thành công.</div>
+                        <div th:if="${param.profileUpdated != null}" class="auth-alert auth-alert-success">Đã cập nhật thông tin cá nhân.</div>
+                        <div th:if="${param.creatorRequested != null}" class="auth-alert auth-alert-success">Đã gửi yêu cầu Creator/Singer. Vui lòng chờ admin duyệt.</div>
+                        <div th:if="${param.error != null and param.error[0] != 'verification_failed'}" class="auth-alert auth-alert-error">
+                            <span th:if="${param.error[0] == 'old_wrong'}">Mật khẩu cũ không chính xác.</span>
+                            <span th:if="${param.error[0] == 'weak_pass'}">Mật khẩu mới phải có ít nhất 8 ký tự, chữ hoa, số và ký tự đặc biệt.</span>
+                            <span th:if="${param.error[0] == 'mismatch'}">Mật khẩu nhập lại không khớp.</span>
+                            <span th:if="${param.error[0] == 'creator_not_approved'}">Tài khoản Creator/Singer của bạn chưa được duyệt.</span>
                         </div>
 
-                        <!-- User info -->
+                        <!-- Email Verification Box -->
+                        <th:block th:if="${!user.emailVerified}">
+                            <div class="auth-alert" style="background: rgba(255, 193, 7, 0.1); border: 1px solid #ffc107; color: #ffc107; padding: 16px; border-radius: 8px; margin-bottom: 24px; line-height: 1.5;">
+                                <div style="font-weight: 700; font-size: 15px; margin-bottom: 6px; display: flex; align-items: center; gap: 6px;">
+                                    <span class="km-symbol" style="font-size:18px;">warning</span> Xác thực tài khoản của bạn
+                                </div>
+                                <p style="font-size: 13.5px; margin: 0 0 12px 0; color: rgba(255, 255, 255, 0.85);">
+                                    Một mã xác thực gồm 6 chữ số đã được gửi đến email <strong><span th:text="${user.email}">email</span></strong>. Vui lòng nhập mã bên dưới để kích hoạt tài khoản.
+                                </p>
+                                
+                                <div th:if="${param.verificationSent != null}" style="font-size: 13px; color: #1ed760; margin-bottom: 12px; font-weight: 600;">
+                                    ✓ Đã gửi lại mã xác thực mới. Vui lòng kiểm tra email.
+                                </div>
+                                <div th:if="${param.error != null and param.error[0] == 'verification_failed'}" style="font-size: 13px; color: #ed4245; margin-bottom: 12px; font-weight: 600;">
+                                    ✗ Mã xác thực không chính xác hoặc đã hết hạn.
+                                </div>
+
+                                <div style="display: flex; gap: 12px; align-items: flex-end; flex-wrap: wrap;">
+                                    <form th:action="@{/profile/verify-email}" method="post" style="display: flex; gap: 8px; flex: 1; min-width: 200px; margin: 0;">
+                                        <input type="text" name="code" required maxlength="6" pattern="\d{6}"
+                                               placeholder="Nhập mã 6 số..." 
+                                               style="flex: 1; padding: 8px 12px; background: rgba(0, 0, 0, 0.2); border: 1px solid rgba(255, 193, 7, 0.3); border-radius: 4px; color: #fff; outline: none; font-size: 14px;">
+                                        <button type="submit" style="background: #ffc107; color: #000; border: none; padding: 8px 16px; border-radius: 4px; font-weight: 700; cursor: pointer; font-size: 13.5px;">Xác thực</button>
+                                    </form>
+                                    
+                                    <form th:action="@{/profile/resend-verification}" method="post" style="margin: 0;">
+                                        <button type="submit" style="background: transparent; border: 1px solid rgba(255, 255, 255, 0.2); color: #fff; padding: 8px 16px; border-radius: 4px; font-weight: 600; cursor: pointer; font-size: 13.5px; transition: border-color 0.2s;">Gửi lại mã</button>
+                                    </form>
+                                </div>
+                            </div>
+                        </th:block>
+                        <th:block th:if="${user.emailVerified}">
+                            <div th:if="${param.verified != null}" class="auth-alert auth-alert-success">✓ Xác thực email thành công! Tài khoản của bạn đã được kích hoạt.</div>
+                        </th:block>
+
                         <div class="profile-info-box">
                             <div class="profile-info-row">
                                 <span class="profile-info-label">Tên đăng nhập</span>
                                 <span class="profile-info-value" th:text="${user.username}">username</span>
                             </div>
                             <div class="profile-info-row">
-                                <span class="profile-info-label">Họ và tên</span>
-                                <span class="profile-info-value" th:text="${user.fullName == '' ? 'Chưa cập nhật' : user.fullName}">Họ tên</span>
+                                <span class="profile-info-label">Email</span>
+                                <span class="profile-info-value" th:text="${user.email}">email</span>
                             </div>
                             <div class="profile-info-row">
                                 <span class="profile-info-label">Vai trò</span>
-                                <span class="profile-info-value" th:text="${user.role == 'ROLE_ADMIN' ? '👑 Quản Trị Viên' : '🎧 Người Dùng'}">Người dùng</span>
+                                <span class="profile-info-value"
+                                      th:text="${user.role == 'ROLE_ADMIN' ? 'Quản trị viên' : (user.role == 'ROLE_CREATOR' ? 'Creator/Singer' : 'Người dùng')}">Người dùng</span>
                             </div>
                         </div>
 
-                        <!-- Change password -->
-                        <div class="section-subtitle">Đổi Mật Khẩu</div>
+                        <div class="section-subtitle">Cập nhật thông tin cá nhân</div>
+                        <form th:action="@{/profile/update}" method="post">
+                            <div class="form-group">
+                                <label>Họ và tên</label>
+                                <input type="text" name="fullName" th:value="${user.fullName}" placeholder="Nhập họ và tên...">
+                            </div>
+                            <div class="form-group">
+                                <label>Số điện thoại</label>
+                                <input type="tel" name="phoneNumber" th:value="${user.phoneNumber}" placeholder="Nhập số điện thoại...">
+                            </div>
+                            <button type="submit">Lưu thông tin</button>
+                        </form>
 
+                        <div class="section-subtitle">Đổi mật khẩu</div>
                         <form th:action="@{/profile/change-password}" method="post">
                             <div class="form-group">
                                 <label>Mật khẩu hiện tại</label>
@@ -68,31 +98,59 @@
                             <div class="form-group">
                                 <label>Mật khẩu mới</label>
                                 <input type="password" name="newPassword" required
-                                       pattern="^(?=.*[A-Z]).{6,}$"
-                                       title="Tối thiểu 6 ký tự, có chữ hoa"
-                                       placeholder="Tối thiểu 6 ký tự, có 1 chữ hoa...">
+                                       pattern="^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&amp;*()_+\-=\[\]{};':,./&lt;&gt;?]).{8,}$"
+                                       title="Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt"
+                                       placeholder="Tối thiểu 8 ký tự, có chữ hoa, số và ký tự đặc biệt...">
                             </div>
                             <div class="form-group">
                                 <label>Xác nhận mật khẩu mới</label>
                                 <input type="password" name="confirmPassword" required placeholder="Nhập lại mật khẩu mới...">
                             </div>
-                            <button type="submit">CẬP NHẬT MẬT KHẨU</button>
+                            <button type="submit">Cập nhật mật khẩu</button>
+                        </form>
+
+                        <div class="section-subtitle">Creator/Singer</div>
+                        <div th:if="${creatorProfile != null}" class="profile-info-box">
+                            <div class="profile-info-row">
+                                <span class="profile-info-label">Nghệ danh</span>
+                                <span class="profile-info-value" th:text="${creatorProfile.stageName}">Stage name</span>
+                            </div>
+                            <div class="profile-info-row">
+                                <span class="profile-info-label">Trạng thái</span>
+                                <span class="profile-info-value"
+                                      th:text="${creatorProfile.status == T(com.musicapp.models.CreatorStatus).APPROVED ? 'Đã duyệt' : (creatorProfile.status == T(com.musicapp.models.CreatorStatus).PENDING ? 'Đang chờ duyệt' : 'Bị từ chối')}">Pending</span>
+                            </div>
+                            <div class="profile-info-row" th:if="${creatorProfile.rejectionReason != null and !creatorProfile.rejectionReason.isBlank()}">
+                                <span class="profile-info-label">Lý do</span>
+                                <span class="profile-info-value" th:text="${creatorProfile.rejectionReason}">reason</span>
+                            </div>
+                            <a th:if="${creatorProfile.approved}" th:href="@{/creator}" class="auth-btn login-btn"
+                               style="display:inline-flex; margin-top:16px; text-decoration:none; justify-content:center;">Vào trang Creator</a>
+                        </div>
+
+                        <form th:if="${creatorProfile == null or creatorProfile.rejected}"
+                              th:action="@{/profile/creator/request}" method="post">
+                            <div class="form-group">
+                                <label>Nghệ danh Creator/Singer</label>
+                                <input type="text" name="stageName" th:value="${user.fullName}" placeholder="VD: Kang Singer">
+                            </div>
+                            <div class="form-group">
+                                <label>Giới thiệu ngắn</label>
+                                <textarea name="bio" rows="4" placeholder="Mô tả kinh nghiệm, phong cách âm nhạc hoặc kênh cá nhân..."
+                                          style="width:100%; padding:12px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; font-family:inherit;"></textarea>
+                            </div>
+                            <button type="submit">Gửi yêu cầu Creator/Singer</button>
                         </form>
                     </div>
                 </div>
             </div>
-            <!-- Mobile padding -->
             <div style="height: 100px;"></div>
         </main>
-        
-        <!-- RIGHT SIDEBAR (Queue/Lyrics) -->
+
         <div th:replace="~{fragments :: right-sidebar}"></div>
     </div>
-    
-    <!-- GLOBAL PLAYER persists -->
     <div th:replace="~{fragments :: global-player}"></div>
 </div>
 
 </body>
 </html>
-

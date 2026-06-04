@@ -1,6 +1,7 @@
 package com.musicapp.controllers;
 
 import com.musicapp.services.MediaService;
+import com.musicapp.services.CreatorService;
 import com.musicapp.services.UserService;
 import org.springframework.stereotype.Controller;
 import org.springframework.ui.Model;
@@ -23,16 +24,20 @@ public class AdminController {
 
     private final UserService userService;
     private final MediaService mediaService;
+    private final CreatorService creatorService;
 
-    public AdminController(UserService userService, MediaService mediaService) {
+    public AdminController(UserService userService, MediaService mediaService, CreatorService creatorService) {
         this.userService = userService;
         this.mediaService = mediaService;
+        this.creatorService = creatorService;
     }
 
     @GetMapping
     public String adminDashboard(Model model, Principal principal) {
         model.addAttribute("users", userService.findAll());
         model.addAttribute("mediaItems", mediaService.findAllForAdmin());
+        model.addAttribute("creatorRequests", creatorService.getPendingRequests());
+        model.addAttribute("pendingMedia", mediaService.findPendingReview());
         model.addAttribute("currentUsername", principal.getName());
         return "admin";
     }
@@ -60,7 +65,14 @@ public class AdminController {
                                   @RequestParam String newRole,
                                   Principal principal) {
         try {
-            userService.changeRole(id, newRole, principal.getName());
+            if ("ROLE_CREATOR".equals(newRole)) {
+                creatorService.approveUserAsCreator(id, principal.getName());
+            } else {
+                userService.changeRole(id, newRole, principal.getName());
+                if ("ROLE_USER".equals(newRole)) {
+                    creatorService.demoteCreator(id, principal.getName());
+                }
+            }
         } catch (IllegalArgumentException e) {
             return "redirect:/admin?error=invalid_role";
         }
@@ -75,6 +87,32 @@ public class AdminController {
     @PostMapping("/media/delete")
     public String deleteMedia(@RequestParam Long id) {
         mediaService.deleteMedia(id);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/creator/approve")
+    public String approveCreator(@RequestParam Long id, Principal principal) {
+        creatorService.approve(id, principal.getName());
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/creator/reject")
+    public String rejectCreator(@RequestParam Long id,
+                                @RequestParam(required = false, defaultValue = "") String reason,
+                                Principal principal) {
+        creatorService.reject(id, reason, principal.getName());
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/media/approve")
+    public String approveMedia(@RequestParam Long id) {
+        mediaService.approveMedia(id);
+        return "redirect:/admin";
+    }
+
+    @PostMapping("/media/reject")
+    public String rejectMedia(@RequestParam Long id) {
+        mediaService.rejectMedia(id);
         return "redirect:/admin";
     }
 }

@@ -472,6 +472,51 @@
 .view-playing .rs-view-playing { display: flex; }
 .view-queue   .rs-view-queue   { display: flex; }
 .view-lyrics  .rs-view-lyrics  { display: flex; }
+.view-ai-chat .rs-view-ai-chat { display: flex !important; animation: rsSlideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1) both; }
+.view-ai-chat .rs-header-tabs { display: none !important; }
+.view-ai-chat .rs-header-ai { display: flex !important; animation: rsFadeIn 0.3s ease both; }
+
+/* Animations for AI chat open/close */
+@keyframes rsSlideIn {
+    from {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(0);
+    }
+}
+
+@keyframes rsFadeIn {
+    from { opacity: 0; transform: translateY(-6px); }
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+@keyframes rsSlideOut {
+    from {
+        opacity: 1;
+        transform: translateX(0);
+    }
+    to {
+        opacity: 0;
+        transform: translateX(30px);
+    }
+}
+
+@keyframes rsFadeOut {
+    from { opacity: 1; transform: translateY(0); }
+    to   { opacity: 0; transform: translateY(-6px); }
+}
+
+/* Smooth transition on header tabs visibility */
+.rs-header-tabs {
+    transition: opacity 0.2s ease;
+}
+.rs-header-ai {
+    transition: opacity 0.2s ease;
+}
+
 
 /* Fixed Header in Sidebar */
 .right-sidebar-header {

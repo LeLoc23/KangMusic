@@ -62,6 +62,7 @@ body.auth-page {
 
 .auth-container input[type="text"],
 .auth-container input[type="email"],
+.auth-container input[type="tel"],
 .auth-container input[type="password"] {
   width: 100%;
   padding: 14px 16px;
@@ -77,6 +78,7 @@ body.auth-page {
 
 .auth-container input[type="text"]:focus-visible,
 .auth-container input[type="email"]:focus-visible,
+.auth-container input[type="tel"]:focus-visible,
 .auth-container input[type="password"]:focus-visible {
   border-color: var(--sp-white);
   box-shadow: var(--shadow-focus);

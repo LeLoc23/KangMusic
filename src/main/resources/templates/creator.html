@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head th:replace="~{fragments :: head('Creator Studio - KangMusic')}"></head>
+<body hx-boost="false">
+
+<div class="page-wrapper">
+    <div th:replace="~{fragments :: top-bar}"></div>
+    <div class="main-layout">
+        <div th:replace="~{fragments :: library-sidebar}"></div>
+
+        <main class="content-area" id="main-content" th:fragment="main-content">
+            <div class="admin-container">
+                <div class="admin-back-row">
+                    <a href="/" class="btn btn-back">← Quay lại Trang chủ</a>
+                </div>
+
+                <h1 class="admin-header">Creator Studio</h1>
+
+                <div class="admin-section">
+                    <h3 th:text="${creatorProfile.stageName}">Creator</h3>
+                    <p style="color:var(--sp-text-muted); margin:6px 0 18px;"
+                       th:text="${creatorProfile.bio != null and !creatorProfile.bio.isBlank() ? creatorProfile.bio : 'Quản lý bài hát, video và thống kê lượt nghe của bạn.'}">
+                        Creator bio
+                    </p>
+                    <a th:href="@{/add}" class="btn btn-success">Tải lên bài hát/video</a>
+                </div>
+
+                <div class="admin-section table-responsive">
+                    <h3>Bài hát cá nhân</h3>
+                    <table>
+                        <thead>
+                        <tr>
+                            <th>ID</th>
+                            <th>Tên bài hát</th>
+                            <th class="hide-mobile">Album</th>
+                            <th>Trạng thái</th>
+                            <th>Lượt nghe</th>
+                            <th>Thao tác</th>
+                        </tr>
+                        </thead>
+                        <tbody>
+                        <tr th:each="item : ${creatorMedia}">
+                            <td th:text="${item.id}">1</td>
+                            <td>
+                                <div style="font-weight:700;" th:text="${item.title}">Tên bài</div>
+                                <div class="mobile-only text-muted" th:text="${item.artist}">Artist</div>
+                            </td>
+                            <td class="hide-mobile" th:text="${item.album != null ? item.album : '-'}">Album</td>
+                            <td>
+                                <span th:if="${item.approved}" class="status-active">Đã duyệt</span>
+                                <span th:if="${item.pendingApproval}" class="status-locked">Chờ duyệt</span>
+                                <span th:if="${item.rejected}" class="status-locked">Từ chối</span>
+                            </td>
+                            <td th:text="${item.playCount}">0</td>
+                            <td>
+                                <a th:href="@{'/media/' + ${item.id} + '/edit'}" class="btn btn-warning" style="text-decoration:none;">Sửa</a>
+                            </td>
+                        </tr>
+                        <tr th:if="${#lists.isEmpty(creatorMedia)}">
+                            <td colspan="6" style="text-align:center; color:var(--sp-text-muted); padding:24px;">Bạn chưa upload bài hát nào.</td>
+                        </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div style="height: 120px;"></div>
+        </main>
+
+        <div th:replace="~{fragments :: right-sidebar}"></div>
+    </div>
+    <div th:replace="~{fragments :: global-player}"></div>
+</div>
+
+</body>
+</html>

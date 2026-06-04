@@ -18,7 +18,13 @@ public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> 
     /**
      * Lấy các bài user đã nghe gần đây — dùng làm "seed" cho recommendation.
      */
-    @Query("SELECT ph.mediaItem FROM PlayHistory ph WHERE ph.userId = :userId ORDER BY ph.playedAt DESC")
+    @Query("""
+           SELECT ph.mediaItem FROM PlayHistory ph
+           WHERE ph.userId = :userId
+             AND ph.mediaItem.deleted = false
+             AND ph.mediaItem.approvalStatus = com.musicapp.models.MediaApprovalStatus.APPROVED
+           ORDER BY ph.playedAt DESC
+           """)
     List<MediaItem> findRecentlyPlayedByUser(@Param("userId") Long userId, Pageable pageable);
 
     /**
@@ -39,6 +45,7 @@ public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> 
              AND ph2.mediaItem.id != :mediaItemId
              AND ph2.userId IS NOT NULL
              AND ph2.mediaItem.deleted = false
+             AND ph2.mediaItem.approvalStatus = com.musicapp.models.MediaApprovalStatus.APPROVED
            GROUP BY ph2.mediaItem
            ORDER BY score DESC
            """)
@@ -57,6 +64,7 @@ public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> 
              AND ph2.mediaItem.id NOT IN :seedIds
              AND ph2.userId != :userId
              AND ph2.mediaItem.deleted = false
+             AND ph2.mediaItem.approvalStatus = com.musicapp.models.MediaApprovalStatus.APPROVED
            GROUP BY ph2.mediaItem
            ORDER BY score DESC
            """)
@@ -69,6 +77,7 @@ public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> 
            SELECT ph.mediaItem, COUNT(ph.id) AS plays
            FROM PlayHistory ph
            WHERE ph.mediaItem.deleted = false
+             AND ph.mediaItem.approvalStatus = com.musicapp.models.MediaApprovalStatus.APPROVED
            GROUP BY ph.mediaItem
            ORDER BY plays DESC
            """)

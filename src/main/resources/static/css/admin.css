@@ -68,8 +68,28 @@ select[name="newRole"] {
 }
 select[name="newRole"]:focus-visible { border-color: var(--sp-white); box-shadow: var(--shadow-focus); }
 
-.action-form { display: inline; margin: 0; }
-.action-btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+.action-form {
+  display: inline-flex;
+  margin: 0;
+  flex: 0 0 auto;
+}
+
+.action-btn-group {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: nowrap;
+  white-space: nowrap;
+  vertical-align: middle;
+}
+
+.action-btn-group .btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: 0 0 auto;
+  white-space: nowrap;
+}
 
 .btn {
   padding: 7px 16px; border-radius: var(--radius-full);

@@ -1,7 +1,10 @@
 package com.musicapp.services;
 
+import com.musicapp.models.CreatorProfile;
+import com.musicapp.models.MediaApprovalStatus;
 import com.musicapp.models.MediaItem;
 import com.musicapp.models.MediaType;
+import com.musicapp.repositories.CreatorProfileRepository;
 import com.musicapp.repositories.MediaItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,8 +17,11 @@ import org.springframework.util.StringUtils;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Set;
+import java.util.stream.Collectors;
 
 @Service
 @Transactional
@@ -23,155 +29,253 @@ public class MediaService {
 
     private static final Logger log = LoggerFactory.getLogger(MediaService.class);
     private static final Set<String> ALLOWED_EXTENSIONS = Set.of("mp3", "mp4", "flac", "ogg", "wav", "m4a", "webm");
+    private static final Set<String> ALLOWED_POSTER_EXTENSIONS = Set.of("jpg", "jpeg", "png", "webp", "gif");
 
-    /** Số bài hát mỗi trang trên trang chủ. */
     public static final int PAGE_SIZE = 20;
-
-    /** Giới hạn tối đa cho trang admin — tránh OOM. */
-    public static final int ADMIN_PAGE_SIZE = 200;
+    public static final int ADMIN_PAGE_SIZE = 300;
 
     private final MediaItemRepository mediaItemRepository;
+    private final CreatorProfileRepository creatorProfileRepository;
     private final StorageService storageService;
     private final FallbackLyricsService lyricGenerator;
+    private final LyricsService lyricsService;
 
-    public MediaService(MediaItemRepository mediaItemRepository, 
+    public MediaService(MediaItemRepository mediaItemRepository,
+                        CreatorProfileRepository creatorProfileRepository,
                         StorageService storageService,
-                        FallbackLyricsService lyricGenerator) {
+                        FallbackLyricsService lyricGenerator,
+                        LyricsService lyricsService) {
         this.mediaItemRepository = mediaItemRepository;
+        this.creatorProfileRepository = creatorProfileRepository;
         this.storageService = storageService;
         this.lyricGenerator = lyricGenerator;
+        this.lyricsService = lyricsService;
     }
 
-    // ── Đọc ──────────────────────────────────────────────────────────────────
-
-    /** Tìm kiếm có phân trang, lọc theo từ khóa và thể loại. */
     @Transactional(readOnly = true)
     public Page<MediaItem> findPaginated(String query, String genre, Pageable pageable) {
         return mediaItemRepository.searchActive(query, genre, pageable);
     }
 
-    /** Overload không có genre — giữ tương thích ngược */
     @Transactional(readOnly = true)
     public Page<MediaItem> findPaginated(String query, Pageable pageable) {
         return findPaginated(query, null, pageable);
     }
 
-    /** Lấy danh sách có giới hạn cho trang admin. */
     @Transactional(readOnly = true)
     public List<MediaItem> findAllForAdmin() {
         return mediaItemRepository
-                .findAllActive(PageRequest.of(0, ADMIN_PAGE_SIZE))
-                .getContent();
+            .findAllActive(PageRequest.of(0, ADMIN_PAGE_SIZE))
+            .getContent();
     }
 
-    /** 10 bài mới nhất — mục "Nhạc mới ra". */
+    @Transactional(readOnly = true)
+    public List<MediaItem> findPendingReview() {
+        return mediaItemRepository.findByApprovalStatusAndDeletedFalseOrderByUploadedAtAsc(MediaApprovalStatus.PENDING);
+    }
+
+    @Transactional(readOnly = true)
+    public List<MediaItem> findByUploader(Long userId) {
+        return mediaItemRepository.findByUploadedByUserIdAndDeletedFalseOrderByUploadedAtDesc(userId);
+    }
+
     @Transactional(readOnly = true)
     public List<MediaItem> findNewReleases(int limit) {
         return mediaItemRepository.findNewReleases(PageRequest.of(0, limit)).getContent();
     }
 
-    /** Danh sách bài cùng thể loại — dùng cho auto-fill queue. */
     @Transactional(readOnly = true)
     public List<MediaItem> findByGenre(String genre, int limit) {
         return mediaItemRepository.findByGenreActive(genre, PageRequest.of(0, limit)).getContent();
     }
 
-    /** Danh sách bài cùng thể loại/cảm xúc, loại trừ bài hiện tại — khuyến nghị đơn giản. */
     @Transactional(readOnly = true)
     public List<MediaItem> findSimilar(Long excludeId, String genre, String emotionLabel, int limit) {
         return mediaItemRepository.findSimilar(excludeId, genre, emotionLabel, PageRequest.of(0, limit)).getContent();
     }
 
-    /** Lấy một bài hát theo ID (trả về null nếu không tồn tại hoặc đã xóa mềm). */
     @Transactional(readOnly = true)
     public MediaItem findById(Long id) {
+        return mediaItemRepository.findByIdAndDeletedFalse(id)
+            .filter(MediaItem::isApproved)
+            .orElse(null);
+    }
+
+    @Transactional(readOnly = true)
+    public MediaItem findByIdForManagement(Long id) {
         return mediaItemRepository.findByIdAndDeletedFalse(id).orElse(null);
     }
 
-    // ── Ghi ──────────────────────────────────────────────────────────────────
-
-    /**
-     * Xác thực và lưu file nhạc được upload.
-     */
-    public void saveMedia(String title, String artist, MultipartFile file,
+    public void saveMedia(String title,
+                          String artist,
+                          MultipartFile file,
                           MultipartFile posterFile,
-                          String type, String emotionLabel,
-                          Integer durationSeconds, String genre, String lyrics) throws IOException {
+                          String type,
+                          String emotionLabel,
+                          Integer durationSeconds,
+                          String genre,
+                          String album,
+                          String lyrics,
+                          Long uploadedByUserId,
+                          boolean adminUpload,
+                          List<Long> creatorIds) throws IOException {
 
         String originalName = StringUtils.cleanPath(
-                file.getOriginalFilename() != null ? file.getOriginalFilename() : "");
-
-        String ext = "";
-        int dotIdx = originalName.lastIndexOf('.');
-        if (dotIdx >= 0) {
-            ext = originalName.substring(dotIdx + 1).toLowerCase();
-        }
-
+            file.getOriginalFilename() != null ? file.getOriginalFilename() : "");
+        String ext = extensionOf(originalName);
         if (!ALLOWED_EXTENSIONS.contains(ext)) {
-            throw new IllegalArgumentException(
-                    "Loại file không được phép. Chỉ chấp nhận: " + ALLOWED_EXTENSIONS);
+            throw new IllegalArgumentException("invalid_file_type");
         }
 
-        // MAJOR-1 FIX: parse via safe enum method (defaults AUDIO on unknown value)
         MediaType mediaType = MediaItem.parseType(type);
-
         String fileKey = storageService.store(file, ext);
-        
-        // Poster xử lý
-        String posterKey = null;
-        if (posterFile != null && !posterFile.isEmpty()) {
-            String pOrig = posterFile.getOriginalFilename();
-            String pExt = "jpg";
-            if (pOrig != null && pOrig.contains(".")) {
-                pExt = pOrig.substring(pOrig.lastIndexOf(".") + 1).toLowerCase();
-            }
-            posterKey = storageService.store(posterFile, pExt);
+        String posterKey = storePosterIfPresent(posterFile);
+
+        List<CreatorProfile> creators = resolveCreators(creatorIds);
+        String displayArtist = displayArtist(artist, creators);
+        String finalLyrics = lyrics;
+        if (finalLyrics == null || finalLyrics.trim().isEmpty()) {
+            finalLyrics = lyricGenerator.generateLyrics(title, displayArtist);
         }
 
-        // Tự tạo Lyric nếu trống
-        if (lyrics == null || lyrics.trim().isEmpty()) {
-            lyrics = lyricGenerator.generateLyrics(title, artist);
-        }
-
-        MediaItem item = new MediaItem(title, artist, fileKey, mediaType.name(), emotionLabel);
+        MediaItem item = new MediaItem(title, displayArtist, fileKey, mediaType.name(), emotionLabel);
         item.setDurationSeconds(durationSeconds);
-        item.setGenre(genre);
-        item.setLyrics(lyrics);
+        item.setGenre(blankToNull(genre));
+        item.setAlbum(blankToNull(album));
+        item.setLyrics(finalLyrics);
         item.setPosterFilename(posterKey);
+        item.setUploadedByUserId(uploadedByUserId);
+        item.setApprovalStatus(adminUpload ? MediaApprovalStatus.APPROVED : MediaApprovalStatus.PENDING);
+        item.setCreators(creators);
         mediaItemRepository.save(item);
 
-        log.info("Đã lưu bài hát id={} title='{}' genre='{}'", item.getId(), title, genre);
+        log.info("Saved media id={} title='{}' status={} uploader={}",
+            item.getId(), title, item.getApprovalStatus(), uploadedByUserId);
+
+        // Async lyrics generation via OpenAI Whisper
+        lyricsService.generateLyricsAsync(item.getId());
     }
 
     public void saveMedia(String title, String artist, MultipartFile file,
-                          MultipartFile posterFile,
-                          String type, String emotionLabel,
-                          Integer durationSeconds, String genre) throws IOException {
-        saveMedia(title, artist, file, posterFile, type, emotionLabel, durationSeconds, genre, null);
+                          MultipartFile posterFile, String type, String emotionLabel,
+                          Integer durationSeconds, String genre, String lyrics) throws IOException {
+        saveMedia(title, artist, file, posterFile, type, emotionLabel, durationSeconds,
+                genre, null, lyrics, null, true, List.of());
     }
 
-    /** @deprecated Prefer MediaItemRepository.incrementPlayCount() for atomic update. */
-    @Deprecated
-    public void incrementPlayCount(Long id) {
+    public void updateMedia(Long id,
+                            String title,
+                            String artist,
+                            MultipartFile posterFile,
+                            String type,
+                            String emotionLabel,
+                            Integer durationSeconds,
+                            String genre,
+                            String album,
+                            String lyrics,
+                            boolean adminEdit,
+                            Long currentUserId,
+                            List<Long> creatorIds) throws IOException {
+        MediaItem item = mediaItemRepository.findByIdAndDeletedFalse(id)
+                .orElseThrow(() -> new IllegalArgumentException("media_not_found"));
+
+        if (!adminEdit && (item.getUploadedByUserId() == null || !item.getUploadedByUserId().equals(currentUserId))) {
+            throw new IllegalArgumentException("access_denied");
+        }
+
+        List<CreatorProfile> creators = resolveCreators(creatorIds);
+        item.setTitle(title);
+        item.setType(MediaItem.parseType(type));
+        item.setEmotionLabel(blankToNull(emotionLabel));
+        item.setDurationSeconds(durationSeconds);
+        item.setGenre(blankToNull(genre));
+        item.setAlbum(blankToNull(album));
+        item.setLyrics(lyrics);
+        item.setCreators(creators);
+        item.setArtist(displayArtist(artist, creators));
+
+        String posterKey = storePosterIfPresent(posterFile);
+        if (posterKey != null) {
+            item.setPosterFilename(posterKey);
+        }
+
+        if (!adminEdit) {
+            item.setApprovalStatus(MediaApprovalStatus.PENDING);
+        }
+        mediaItemRepository.save(item);
+    }
+
+    public void approveMedia(Long id) {
         mediaItemRepository.findByIdAndDeletedFalse(id).ifPresent(item -> {
-            item.incrementPlayCount();
+            item.setApprovalStatus(MediaApprovalStatus.APPROVED);
             mediaItemRepository.save(item);
         });
     }
 
-    // ── Xóa mềm ──────────────────────────────────────────────────────────────
+    public List<MediaItem> findByCreatorIdActive(Long creatorId) {
+        return mediaItemRepository.findByCreatorIdActive(creatorId);
+    }
+
+    public List<MediaItem> findAllActiveList() {
+        return mediaItemRepository.findAllActiveList();
+    }
+
+    public void rejectMedia(Long id) {
+        mediaItemRepository.findByIdAndDeletedFalse(id).ifPresent(item -> {
+            item.setApprovalStatus(MediaApprovalStatus.REJECTED);
+            mediaItemRepository.save(item);
+        });
+    }
+
+    @Deprecated
+    public void incrementPlayCount(Long id) {
+        mediaItemRepository.incrementPlayCount(id);
+    }
 
     public void deleteMedia(Long id) {
         mediaItemRepository.findByIdAndDeletedFalse(id).ifPresent(item -> {
             item.setDeleted(true);
             mediaItemRepository.save(item);
-            log.info("Đã xóa mềm bài hát id={} title='{}'", item.getId(), item.getTitle());
-
             try {
                 storageService.delete(item.getFileName());
-            } catch (java.io.IOException e) {
-                log.warn("Không xóa được file '{}': {}", item.getFileName(), e.getMessage());
+            } catch (IOException e) {
+                log.warn("Cannot delete media file '{}': {}", item.getFileName(), e.getMessage());
             }
         });
+    }
+
+    private List<CreatorProfile> resolveCreators(List<Long> creatorIds) {
+        if (creatorIds == null || creatorIds.isEmpty()) return new ArrayList<>();
+        List<Long> uniqueIds = new ArrayList<>(new LinkedHashSet<>(creatorIds));
+        return creatorProfileRepository.findAllById(uniqueIds).stream()
+                .filter(CreatorProfile::isApproved)
+                .collect(Collectors.toCollection(ArrayList::new));
+    }
+
+    private String displayArtist(String fallbackArtist, List<CreatorProfile> creators) {
+        if (creators != null && !creators.isEmpty()) {
+            return creators.stream().map(CreatorProfile::getStageName).collect(Collectors.joining(", "));
+        }
+        String clean = fallbackArtist != null ? fallbackArtist.trim() : "";
+        return clean.isBlank() ? "Unknown Artist" : clean;
+    }
+
+    private String storePosterIfPresent(MultipartFile posterFile) throws IOException {
+        if (posterFile == null || posterFile.isEmpty()) return null;
+        String original = posterFile.getOriginalFilename() != null ? posterFile.getOriginalFilename() : "";
+        String ext = extensionOf(original);
+        if (!ALLOWED_POSTER_EXTENSIONS.contains(ext)) {
+            throw new IllegalArgumentException("invalid_poster_type");
+        }
+        return storageService.store(posterFile, ext);
+    }
+
+    private String extensionOf(String filename) {
+        int dotIdx = filename.lastIndexOf('.');
+        return dotIdx >= 0 ? filename.substring(dotIdx + 1).toLowerCase() : "";
+    }
+
+    private String blankToNull(String value) {
+        return value == null || value.isBlank() ? null : value.trim();
     }
 }
