@@ -44,6 +44,11 @@ src/main/resources/static/media/
 *.mv.db
 *.trace.db
 
+### Local docs and helper scripts ###
+docs/
+tools/
+figma/
+
 ### Office temporary files ###
 ~$*.docx
 
