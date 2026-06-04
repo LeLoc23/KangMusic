@@ -219,47 +219,47 @@
                 </th:block>
                 <!-- ── Genre Chips ────────────────────────────── -->
                 <div class="genre-chips" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
-                    <a th:href="@{/(query=${query}, genre='')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query})} : @{/}"
                        th:classappend="${(selectedGenre == null or selectedGenre == '') ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">music_note</span> Tất cả
                     </a>
-                    <a th:href="@{/(query=${query}, genre='VIET_POP')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='VIET_POP')} : @{/(genre='VIET_POP')}"
                        th:classappend="${selectedGenre == 'VIET_POP' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">mic</span> Việt Pop
                     </a>
-                    <a th:href="@{/(query=${query}, genre='RELAX')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='RELAX')} : @{/(genre='RELAX')}"
                        th:classappend="${selectedGenre == 'RELAX' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">self_improvement</span> Thư giãn
                     </a>
-                    <a th:href="@{/(query=${query}, genre='PARTY')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='PARTY')} : @{/(genre='PARTY')}"
                        th:classappend="${selectedGenre == 'PARTY' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">celebration</span> Tiệc tùng
                     </a>
-                    <a th:href="@{/(query=${query}, genre='CHILL')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='CHILL')} : @{/(genre='CHILL')}"
                        th:classappend="${selectedGenre == 'CHILL' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">ac_unit</span> Chill
                     </a>
-                    <a th:href="@{/(query=${query}, genre='SAD')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='SAD')} : @{/(genre='SAD')}"
                        th:classappend="${selectedGenre == 'SAD' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">mood_bad</span> Buồn
                     </a>
-                    <a th:href="@{/(query=${query}, genre='ENERGETIC')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='ENERGETIC')} : @{/(genre='ENERGETIC')}"
                        th:classappend="${selectedGenre == 'ENERGETIC' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">bolt</span> Năng lượng
                     </a>
-                    <a th:href="@{/(query=${query}, genre='INDIE')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='INDIE')} : @{/(genre='INDIE')}"
                        th:classappend="${selectedGenre == 'INDIE' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">music_note</span> Indie
                     </a>
-                    <a th:href="@{/(query=${query}, genre='LOFI')}"
+                    <a th:href="${query != null and query != ''} ? @{/search(query=${query}, genre='LOFI')} : @{/(genre='LOFI')}"
                        th:classappend="${selectedGenre == 'LOFI' ? ' active' : ''}"
                        class="genre-chip">
                         <span class="km-symbol" aria-hidden="true">local_cafe</span> Lo-fi
@@ -826,9 +826,8 @@
                 <div class="pagination-controls" th:if="${totalPages > 1}">
                     <a class="pagination-btn"
                        th:classappend="${!hasPrev} ? ' disabled' : ''"
-                       th:href="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage - 1})}"
-                       hx-get="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage - 1})}"
-                       hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
+                       th:href="${query != null and query != ''} ? @{/search(query=${query}, genre=${selectedGenre}, page=${currentPage - 1})} : @{/(genre=${selectedGenre}, page=${currentPage - 1})}"
+                       hx-boost="true" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                             <path d="M15.41 7.41L14 6l-6 6 6 6 1.41-1.41L10.83 12z"/>
                         </svg>
@@ -838,9 +837,8 @@
                           th:text="'Trang ' + (${currentPage} + 1) + ' / ' + ${totalPages}"></span>
                     <a class="pagination-btn"
                        th:classappend="${!hasNext} ? ' disabled' : ''"
-                       th:href="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage + 1})}"
-                       hx-get="@{/(query=${query}, genre=${selectedGenre}, page=${currentPage + 1})}"
-                       hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
+                       th:href="${query != null and query != ''} ? @{/search(query=${query}, genre=${selectedGenre}, page=${currentPage + 1})} : @{/(genre=${selectedGenre}, page=${currentPage + 1})}"
+                       hx-boost="true" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                         Tiếp
                         <svg viewBox="0 0 24 24" fill="currentColor" width="16" height="16">
                             <path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/>

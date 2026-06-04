@@ -113,6 +113,12 @@
   padding: 12px 12px;
   outline: none;
 }
+.global-search-input:focus,
+.global-search-input:focus-visible,
+.global-search-clear:focus-visible {
+  outline: none !important;
+  box-shadow: none !important;
+}
 .global-search-input::placeholder {
   color: var(--sp-text-muted);
   font-weight: 500;
@@ -389,6 +395,46 @@
   background: rgba(255,255,255,0.05);
 }
 
+.library-rail-search-btn {
+  display: none;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto 8px;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  color: var(--sp-text-muted);
+  background: transparent;
+  transition: color 0.2s, background 0.2s;
+}
+
+.library-rail-search-btn .km-symbol {
+  font-size: 22px;
+}
+
+.library-rail-search-btn:hover {
+  color: var(--sp-white);
+  background: rgba(255,255,255,0.06);
+}
+
+.library-sidebar.collapsed .library-rail-search-btn {
+  display: flex;
+}
+
+.library-sidebar.collapsed .library-title-btn {
+  width: 48px;
+  height: 48px;
+  padding: 0;
+  justify-content: center;
+  gap: 0;
+}
+
+.library-sidebar.collapsed .library-title-btn svg {
+  width: 24px;
+  height: 24px;
+  flex-shrink: 0;
+}
+
 .library-sidebar.collapsed .library-title-text,
 .library-sidebar.collapsed .library-header-actions,
 .library-sidebar.collapsed .library-filters,
@@ -402,9 +448,26 @@
   padding: 0;
 }
 
+.library-sidebar.collapsed .library-content-header,
+.library-sidebar.collapsed .library-login-prompt {
+  display: none;
+}
+
 .library-sidebar.collapsed .library-header {
   justify-content: center;
-  padding-left: 0; padding-right: 0;
+  padding: 8px 0 2px;
+}
+
+.library-sidebar.collapsed .library-rail-search-btn {
+  margin: 0 auto 2px;
+}
+
+.library-sidebar.collapsed .library-scroll-container {
+  padding: 0 8px 8px;
+}
+
+.library-sidebar.collapsed .library-items-list {
+  gap: 4px;
 }
 
 .library-filters {
@@ -471,6 +534,25 @@
   display: flex; flex-direction: column; gap: 2px;
 }
 
+.library-login-prompt {
+  padding: 16px;
+  color: var(--sp-text-muted);
+  font-size: 14px;
+  text-align: center;
+  line-height: 1.45;
+}
+
+.library-login-prompt a {
+  color: var(--sp-white);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  font-weight: 600;
+}
+
+.library-login-prompt a:hover {
+  color: var(--sp-white);
+}
+
 .library-item {
   display: flex;
   align-items: center;
@@ -486,7 +568,10 @@
 
 .library-sidebar.collapsed .library-item {
   justify-content: center;
-  padding: 8px 0;
+  padding: 0;
+  width: 48px;
+  height: 48px;
+  margin: 0 auto;
 }
 
 .library-item-thumb {
@@ -1344,5 +1429,75 @@
 @keyframes spin-slow {
     from { transform: rotate(0deg); }
     to { transform: rotate(360deg); }
+}
+
+/* Final collapsed-library rail override. Kept at file end so saved grid/list modes cannot spread icons apart. */
+.library-sidebar.collapsed .library-header {
+  padding: 8px 0 0 !important;
+  justify-content: center !important;
+}
+
+.library-sidebar.collapsed .library-title-btn,
+.library-sidebar.collapsed .library-rail-search-btn,
+.library-sidebar.collapsed .library-item {
+  width: 48px !important;
+  height: 48px !important;
+  min-width: 48px !important;
+  margin-left: auto !important;
+  margin-right: auto !important;
+}
+
+.library-sidebar.collapsed .library-title-btn {
+  padding: 0 !important;
+  gap: 0 !important;
+  justify-content: center !important;
+}
+
+.library-sidebar.collapsed .library-rail-search-btn {
+  display: flex !important;
+  margin-top: 0 !important;
+  margin-bottom: 0 !important;
+}
+
+.library-sidebar.collapsed .library-scroll-container {
+  flex: 0 0 auto !important;
+  padding: 2px 0 8px !important;
+  overflow: visible !important;
+}
+
+.library-sidebar.collapsed .library-items-list {
+  display: flex !important;
+  flex-direction: column !important;
+  grid-template-columns: none !important;
+  gap: 2px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+}
+
+.library-sidebar.collapsed .library-folder-wrapper,
+.library-sidebar.collapsed .library-playlist-wrapper {
+  margin-left: 0 !important;
+}
+
+.library-sidebar.collapsed .library-item {
+  display: flex !important;
+  flex-direction: row !important;
+  align-items: center !important;
+  justify-content: center !important;
+  gap: 0 !important;
+  padding: 0 !important;
+  background: transparent !important;
+}
+
+.library-sidebar.collapsed .library-item-thumb {
+  width: 48px !important;
+  height: 48px !important;
+  aspect-ratio: auto !important;
+  border-radius: 6px !important;
+}
+
+.library-sidebar.collapsed .library-content-header,
+.library-sidebar.collapsed .library-login-prompt {
+  display: none !important;
 }
 

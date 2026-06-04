@@ -47,7 +47,7 @@ public class SecurityConfig {
                 // Actuator: health check is public; all other actuator endpoints require ADMIN
                 .requestMatchers("/actuator/health").permitAll()
                 .requestMatchers("/actuator/**").hasAuthority("ROLE_ADMIN")
-                .requestMatchers("/", "/login", "/register", "/forgot-password",
+                .requestMatchers("/", "/search", "/login", "/register", "/forgot-password",
                         "/reset-password", "/css/**", "/js/**", "/media/**",
                         "/stream/**", "/api/search", "/api/genre/**", "/api/similar/**",
                         "/api/ai/chat/**", "/api/ai/recommend", "/api/comments/**", "/track/**").permitAll()

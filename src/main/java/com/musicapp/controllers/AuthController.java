@@ -77,16 +77,14 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public String processForgotPassword(@RequestParam String email,
                                         @RequestParam(required = false, defaultValue = "") String captchaCode,
+                                        @RequestParam(value = ImageCaptchaService.TOKEN_REQUEST_PARAM, required = false) String captchaToken,
                                         Model model,
                                         HttpSession session) {
-        String expectedCode = (String) session.getAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
-
-        if (!imageCaptchaService.verify(captchaCode, expectedCode)) {
+        if (!imageCaptchaService.verifyAndConsume(session, captchaCode, captchaToken)) {
             model.addAttribute("error", "Mã xác minh không đúng. Vui lòng nhập lại.");
             addCaptcha(model, session);
             return "forgot-password";
         }
-        session.removeAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
 
         authService.processForgotPassword(email);
         session.setAttribute("resetEmail", email);
@@ -156,7 +154,8 @@ public class AuthController {
 
     private void addCaptcha(Model model, HttpSession session) {
         ImageCaptchaService.CaptchaData captcha = imageCaptchaService.generateCaptcha();
-        session.setAttribute(ImageCaptchaService.SESSION_ATTRIBUTE, captcha.code());
+        imageCaptchaService.store(session, captcha);
         model.addAttribute("captchaImage", captcha.imageDataUri());
+        model.addAttribute("captchaToken", captcha.token());
     }
 }

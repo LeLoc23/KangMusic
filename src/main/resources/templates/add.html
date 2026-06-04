@@ -39,8 +39,8 @@
                     <input type="text" name="title" required placeholder="VD: Lạc Trôi">
 
                     <div th:if="${isAdminUpload}">
-                        <label>Ca sĩ / Nghệ sĩ</label>
-                        <input type="text" name="artist" placeholder="Nhập thủ công nếu chưa có Creator/Singer">
+                        <label>Nghệ sĩ ngoài hệ thống <span style="font-size:11px; color:var(--text-muted)">(nếu chưa có tài khoản Creator/Singer)</span></label>
+                        <input type="text" name="artist" placeholder="VD: Sơn Tùng M-TP, Mono">
                     </div>
                     <div th:unless="${isAdminUpload}">
                         <label>Ca sĩ / Nghệ sĩ</label>
@@ -49,13 +49,21 @@
                              th:text="${currentCreator != null ? currentCreator.stageName : 'Creator/Singer'}">Creator/Singer</div>
                     </div>
 
-                    <label>Creator/Singer trình bày hoặc feat <span style="font-size:11px; color:var(--text-muted)">(có thể chọn nhiều)</span></label>
-                    <select name="creatorIds" multiple size="5">
-                        <option th:each="creator : ${approvedCreators}"
-                                th:if="${isAdminUpload or currentCreator == null or creator.id != currentCreator.id}"
-                                th:value="${creator.id}"
-                                th:text="${creator.stageName + ' - @' + creator.user.username}">Singer</option>
-                    </select>
+                    <label>Creator/Singer có tài khoản <span style="font-size:11px; color:var(--text-muted)">(tick nhiều nghệ sĩ nếu có feat)</span></label>
+                    <div class="creator-picker">
+                        <label class="creator-choice"
+                               th:each="creator : ${approvedCreators}"
+                               th:if="${isAdminUpload or currentCreator == null or creator.id != currentCreator.id}">
+                            <input type="checkbox" name="creatorIds" th:value="${creator.id}">
+                            <span class="creator-choice-main">
+                                <span class="creator-choice-name" th:text="${creator.stageName}">Singer</span>
+                                <span class="creator-choice-user" th:text="'@' + ${creator.user.username}">@username</span>
+                            </span>
+                        </label>
+                        <div class="creator-picker-empty" th:if="${#lists.isEmpty(approvedCreators)}">
+                            Chưa có Creator/Singer nào được duyệt.
+                        </div>
+                    </div>
 
                     <label>Ảnh bìa (Poster) <span style="font-size:11px; color:var(--text-muted)">(tùy chọn)</span></label>
                     <div class="poster-upload-wrapper" style="margin-bottom:16px;">

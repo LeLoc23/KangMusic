@@ -314,6 +314,80 @@ function upgradeLegacyIcons(root = document) {
     upgradeLegacyTextIcons(root);
 }
 
+const KM_LIBRARY_STATE_KEY = 'km_library_state';
+const KM_LIBRARY_EXPANDED_KEY = 'km_library_expanded';
+const KM_RIGHT_SIDEBAR_STATE_KEY = 'km_right_sidebar_state';
+const KM_RIGHT_SIDEBAR_VIEW_KEY = 'km_right_sidebar_view';
+const KM_RIGHT_SIDEBAR_VIEWS = new Set(['playing', 'queue', 'lyrics', 'ai-chat']);
+
+function kmReadStorage(key, fallback = '') {
+    try {
+        return localStorage.getItem(key) ?? fallback;
+    } catch {
+        return fallback;
+    }
+}
+
+function kmWriteStorage(key, value) {
+    try {
+        localStorage.setItem(key, value);
+    } catch {
+        // Storage can be unavailable in restricted browser modes.
+    }
+}
+
+function restorePersistentSidebarState(root = document) {
+    const doc = root.ownerDocument || document;
+    const rootEl = doc.documentElement;
+    const librarySidebar = doc.getElementById('library-sidebar');
+    const rightSidebar = doc.getElementById('right-sidebar');
+    const mainLayout = doc.querySelector('.main-layout');
+
+    rootEl?.classList.add('sidebar-state-restoring');
+
+    if (librarySidebar) {
+        const isLibraryExpanded = kmReadStorage(KM_LIBRARY_EXPANDED_KEY, 'false') === 'true';
+        const isLibraryCollapsed = kmReadStorage(KM_LIBRARY_STATE_KEY, 'default') === 'collapsed';
+        librarySidebar.classList.toggle('expanded', isLibraryExpanded);
+        librarySidebar.classList.toggle('collapsed', !isLibraryExpanded && isLibraryCollapsed);
+        mainLayout?.classList.toggle('library-expanded-view', isLibraryExpanded);
+    }
+
+    if (rightSidebar) {
+        const savedView = kmReadStorage(KM_RIGHT_SIDEBAR_VIEW_KEY, 'playing');
+        if (KM_RIGHT_SIDEBAR_VIEWS.has(savedView)) {
+            rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
+            rightSidebar.classList.add('view-' + savedView);
+        }
+        rightSidebar.classList.toggle(
+            'collapsed',
+            kmReadStorage(KM_RIGHT_SIDEBAR_STATE_KEY, 'default') === 'collapsed'
+        );
+    }
+
+    requestAnimationFrame(() => {
+        rootEl?.classList.remove('sidebar-state-restoring');
+    });
+}
+
+function setRightSidebarCollapsed(collapsed) {
+    const sidebar = document.getElementById('right-sidebar');
+    sidebar?.classList.toggle('collapsed', collapsed);
+    kmWriteStorage(KM_RIGHT_SIDEBAR_STATE_KEY, collapsed ? 'collapsed' : 'default');
+}
+
+function persistRightSidebarView(viewName) {
+    if (KM_RIGHT_SIDEBAR_VIEWS.has(viewName)) {
+        kmWriteStorage(KM_RIGHT_SIDEBAR_VIEW_KEY, viewName);
+    }
+}
+
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', () => restorePersistentSidebarState(), { once: true });
+} else {
+    restorePersistentSidebarState();
+}
+
 
 
 
@@ -331,6 +405,7 @@ document.addEventListener('DOMContentLoaded', () => {
     function isShellRoute(urlObj) {
         const path = urlObj.pathname;
         return path === '/'
+            || path === '/search'
             || path === '/library'
             || path === '/profile'
             || path === '/admin'
@@ -670,8 +745,8 @@ document.addEventListener('DOMContentLoaded', () => {
     function getPlayingContextLabel() {
         const idx = queueIndex + 1;
         const total = queue.length;
-        if (total > 0) return `Dang phat ${idx}/${total}`;
-        return 'Dang phat';
+        if (total > 0) return `Đang phát ${idx}/${total}`;
+        return 'Đang phát';
     }
 
     function renderExpandedQueuePreview() {
@@ -1702,6 +1777,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Remove old view classes
         rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
         rightSidebar.classList.add('view-' + view);
+        persistRightSidebarView(view);
 
         // Update tab active states
         document.querySelectorAll('.rs-tab-btn').forEach(btn => {
@@ -1723,6 +1799,7 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('.rs-tab-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
             e.stopPropagation();
+            setRightSidebarCollapsed(false);
             setSidebarView(btn.dataset.view);
         });
     });
@@ -1730,7 +1807,8 @@ document.addEventListener('DOMContentLoaded', () => {
     // Player bar queue button → goes to queue view
     btnQueue?.addEventListener('click', (e) => {
         e.stopPropagation();
-        rightSidebar?.classList.remove('hidden', 'collapsed');
+        rightSidebar?.classList.remove('hidden');
+        setRightSidebarCollapsed(false);
         setSidebarView('queue');
     });
 
@@ -1801,7 +1879,8 @@ document.addEventListener('DOMContentLoaded', () => {
     const btnNowPlaying = document.getElementById('btn-now-playing');
     btnNowPlaying?.addEventListener('click', (e) => {
         e.stopPropagation();
-        rightSidebar?.classList.remove('hidden', 'collapsed');
+        rightSidebar?.classList.remove('hidden');
+        setRightSidebarCollapsed(false);
         setSidebarView('playing');
     });
 
@@ -1859,13 +1938,13 @@ document.addEventListener('DOMContentLoaded', () => {
         if (rightSidebar?.classList.contains('view-ai-chat')) {
             setSidebarView('playing');
         }
-        rightSidebar?.classList.add('collapsed');
+        setRightSidebarCollapsed(true);
     });
 
     // OPEN WHEN COLLAPSED
     rightSidebar?.addEventListener('click', (e) => {
         if (rightSidebar.classList.contains('collapsed')) {
-            rightSidebar.classList.remove('collapsed');
+            setRightSidebarCollapsed(false);
         }
     });
 
@@ -2213,6 +2292,27 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     }
 
+    function scrollActiveLyricsLine(container, line) {
+        if (!container || !line) return;
+        if (container !== lyricsOverlayContent) return;
+        if (!lyricsOverlay?.classList.contains('visible')) return;
+
+        const scrollParent = container.closest('.lyrics-overlay-inner');
+        if (!scrollParent) return;
+
+        const parentRect = scrollParent.getBoundingClientRect();
+        const lineRect = line.getBoundingClientRect();
+        const targetTop = scrollParent.scrollTop
+            + (lineRect.top - parentRect.top)
+            - (scrollParent.clientHeight / 2)
+            + (lineRect.height / 2);
+
+        scrollParent.scrollTo({
+            top: Math.max(0, targetTop),
+            behavior: 'smooth'
+        });
+    }
+
     function updateLyricsHighlight(currentTime) {
         if (!currentLyricsSegments || currentLyricsSegments.length === 0) return;
         
@@ -2248,8 +2348,7 @@ document.addEventListener('DOMContentLoaded', () => {
                 if (idx === activeIdx) {
                     if (!line.classList.contains('active')) {
                         line.classList.add('active');
-                        // Scroll smoothly to keep active line centered
-                        line.scrollIntoView({ behavior: 'smooth', block: 'center' });
+                        scrollActiveLyricsLine(container, line);
                     }
                 } else {
                     line.classList.remove('active');
@@ -2467,6 +2566,7 @@ document.addEventListener('DOMContentLoaded', () => {
         rightSidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
         // Add the requested view class
         rightSidebar.classList.add('view-' + viewName);
+        persistRightSidebarView(viewName);
 
         // Update tab button active states
         const tabBtns = rightSidebar.querySelectorAll('.rs-tab-btn');
@@ -2489,7 +2589,10 @@ document.addEventListener('DOMContentLoaded', () => {
         rightSidebar.querySelectorAll('.rs-tab-btn').forEach(tab => {
             tab.addEventListener('click', () => {
                 const view = tab.dataset.view;
-                if (view) setSidebarView(view);
+                if (view) {
+                    setRightSidebarCollapsed(false);
+                    setSidebarView(view);
+                }
             });
         });
 
@@ -2497,7 +2600,7 @@ document.addEventListener('DOMContentLoaded', () => {
         const btnNowPlaying = document.getElementById('btn-now-playing');
         if (btnNowPlaying) {
             btnNowPlaying.addEventListener('click', () => {
-                rightSidebar.classList.remove('collapsed');
+                setRightSidebarCollapsed(false);
                 setSidebarView('playing');
             });
         }
@@ -2505,7 +2608,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Player bar "Queue" button
         if (btnQueue) {
             btnQueue.addEventListener('click', () => {
-                rightSidebar.classList.remove('collapsed');
+                setRightSidebarCollapsed(false);
                 setSidebarView('queue');
                 renderQueuePanel();
             });
@@ -2531,6 +2634,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (!sidebar) return;
         sidebar.classList.remove('view-playing', 'view-queue', 'view-lyrics', 'view-ai-chat');
         sidebar.classList.add('view-' + viewName);
+        persistRightSidebarView(viewName);
     }
 
     // Click on "Đặt câu hỏi" button — uses event delegation
@@ -2547,7 +2651,7 @@ document.addEventListener('DOMContentLoaded', () => {
         // Show sidebar & switch to AI chat view
         const sidebar = document.getElementById('right-sidebar');
         if (sidebar) {
-            sidebar.classList.remove('collapsed');
+            setRightSidebarCollapsed(false);
             setSidebarViewForAi('ai-chat');
         }
 
@@ -2765,13 +2869,18 @@ function openModal(mediaId) {
     const btnToggleLibrary = document.getElementById('btn-toggle-library');
 
     if (btnToggleLibrary && librarySidebar) {
-        const savedState = localStorage.getItem('km_library_state') || 'default';
-        if (savedState === 'collapsed') librarySidebar.classList.add('collapsed');
+        restorePersistentSidebarState();
+
+        const savedState = kmReadStorage(KM_LIBRARY_STATE_KEY, 'default');
+        const savedExpanded = kmReadStorage(KM_LIBRARY_EXPANDED_KEY, 'false') === 'true';
+        if (!savedExpanded && savedState === 'collapsed') librarySidebar.classList.add('collapsed');
 
         btnToggleLibrary.addEventListener('click', () => {
             librarySidebar.classList.toggle('collapsed');
             librarySidebar.classList.remove('expanded');
-            localStorage.setItem('km_library_state', librarySidebar.classList.contains('collapsed') ? 'collapsed' : 'default');
+            document.querySelector('.main-layout')?.classList.remove('library-expanded-view');
+            kmWriteStorage(KM_LIBRARY_EXPANDED_KEY, 'false');
+            kmWriteStorage(KM_LIBRARY_STATE_KEY, librarySidebar.classList.contains('collapsed') ? 'collapsed' : 'default');
         });
     }
 
@@ -2781,7 +2890,7 @@ function openModal(mediaId) {
         const mainLayout = document.querySelector('.main-layout');
 
         // Restore state on page load
-        const isExpanded = localStorage.getItem('km_library_expanded') === 'true';
+        const isExpanded = kmReadStorage(KM_LIBRARY_EXPANDED_KEY, 'false') === 'true';
         if (isExpanded) {
             librarySidebar.classList.add('expanded');
             librarySidebar.classList.remove('collapsed');
@@ -2799,7 +2908,8 @@ function openModal(mediaId) {
                 mainLayout.classList.toggle('library-expanded-view', isExpanding);
             }
 
-            localStorage.setItem('km_library_expanded', isExpanding);
+            kmWriteStorage(KM_LIBRARY_EXPANDED_KEY, String(isExpanding));
+            kmWriteStorage(KM_LIBRARY_STATE_KEY, 'default');
         });
     }
 
@@ -2899,16 +3009,33 @@ function openModal(mediaId) {
 
     // ── Library Search ─────────────────────────────────────────────────────
     const btnLibSearch   = document.getElementById('btn-library-search');
+    const btnRailSearch  = document.getElementById('btn-library-rail-search');
     const libSearchInput = document.getElementById('library-search-input');
     const libraryItems   = document.getElementById('library-items-list');
+
+    function openLibrarySearch() {
+        if (!libSearchInput) return;
+        librarySidebar?.classList.remove('collapsed');
+        librarySidebar?.classList.remove('expanded');
+        document.querySelector('.main-layout')?.classList.remove('library-expanded-view');
+        kmWriteStorage(KM_LIBRARY_STATE_KEY, 'default');
+        kmWriteStorage(KM_LIBRARY_EXPANDED_KEY, 'false');
+        libSearchInput.classList.remove('hidden');
+        requestAnimationFrame(() => libSearchInput.focus());
+    }
+
+    btnRailSearch?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openLibrarySearch();
+    });
 
     if (btnLibSearch && libSearchInput) {
         btnLibSearch.addEventListener('click', (e) => {
             e.stopPropagation();
-            libSearchInput.classList.toggle('hidden');
-            if (!libSearchInput.classList.contains('hidden')) {
-                libSearchInput.focus();
+            if (libSearchInput.classList.contains('hidden')) {
+                openLibrarySearch();
             } else {
+                libSearchInput.classList.add('hidden');
                 libSearchInput.value = '';
                 filterLibraryItems('');
             }

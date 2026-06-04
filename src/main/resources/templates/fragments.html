@@ -9,7 +9,7 @@
     <link rel="icon" type="image/svg+xml" th:href="@{/favicon.svg}">
     <link rel="shortcut icon" th:href="@{/favicon.svg}">
     <link rel="stylesheet" th:href="@{/css/common.css(v=2)}">
-    <link rel="stylesheet" th:href="@{/css/player.css(v=6)}">
+    <link rel="stylesheet" th:href="@{/css/player.css(v=9)}">
     <link rel="stylesheet" th:href="@{/css/playlist.css}">
     <link rel="stylesheet" th:href="@{/css/modal.css}">
     <link rel="stylesheet" th:href="@{/css/track.css}">
@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0">
     
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer th:src="@{/js/app.js(v=22)}"></script>
+    <script defer th:src="@{/js/app.js(v=25)}"></script>
 </head>
 <body>
 
@@ -46,7 +46,7 @@
                 <span class="km-symbol" aria-hidden="true">home</span>
             </a>
             <div class="top-bar-search-wrapper">
-                <form th:action="@{/}" method="get" class="global-search-form" id="global-search-form"
+                <form th:action="@{/search}" method="get" class="global-search-form" id="global-search-form"
                       hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">
                     <div class="global-search-input-group">
                         <span class="km-symbol" aria-hidden="true" style="color:#b3b3b3;">search</span>
@@ -155,6 +155,10 @@
                 </a>
             </div>
         </div>
+
+        <button class="library-rail-search-btn" id="btn-library-rail-search" title="Tìm kiếm trong thư viện">
+            <span class="km-symbol" aria-hidden="true">search</span>
+        </button>
         
         <!-- Filter pills (Only shown when expanded) -->
         <div class="library-filters">
@@ -166,7 +170,7 @@
                 <!-- Search button / input -->
                 <div class="library-search-container">
                     <button class="library-search-btn" id="btn-library-search" title="Tìm kiếm trong thư viện">
-                        <span class="km-symbol" aria-hidden="true" style="font-size:16px;">search</span>
+                        <span class="km-symbol" aria-hidden="false" style="font-size:16px;">search</span>
                     </button>
                     <input type="text" class="library-search-input hidden" id="library-search-input" placeholder="Tìm trong thư viện...">
                 </div>
@@ -215,8 +219,9 @@
 
             <div class="library-items-list" id="library-items-list">
                 <!-- Fallback text when empty/logged out -->
-                <div sec:authorize="isAnonymous()" style="padding: 16px; color:#b3b3b3; font-size:14px; text-align:center;">
-                    Đăng nhập để xem danh sách phát của bạn.
+                <div sec:authorize="isAnonymous()" class="library-login-prompt">
+                    <a th:href="@{/login}" hx-boost="false">Đăng nhập</a>
+                    <span> để xem danh sách phát của bạn.</span>
                 </div>
 
                 <th:block sec:authorize="isAuthenticated()">
@@ -453,10 +458,14 @@
         <!-- Expanded Player Overlay -->
         <div class="player-expanded-overlay" id="player-expanded-overlay" aria-hidden="true">
             <div class="player-expanded-top">
-                <div class="player-expanded-context" id="expanded-context">Đang phát</div>
+                <div class="player-expanded-context" id="expanded-context" role="status" aria-live="polite">Đang phát</div>
                 <div class="player-expanded-top-actions">
-                    <button type="button" class="player-expanded-btn" id="btn-expanded-mini" title="Mini player">ıll|̲̅̅●̲̅̅|̲̅̅=̲̅̅|̲̅̅●̲̅̅|llı</button>
-                    <button type="button" class="player-expanded-btn" id="btn-expanded-close" title="Thu gọn">🗒</button>
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-mini" title="Mini player" aria-label="Mini player">
+                        <span class="km-symbol" aria-hidden="true">picture_in_picture_alt</span>
+                    </button>
+                    <button type="button" class="player-expanded-btn" id="btn-expanded-close" title="Thu gọn" aria-label="Thu gọn trình phát">
+                        <span class="km-symbol" aria-hidden="true">keyboard_arrow_down</span>
+                    </button>
                 </div>
             </div>
             <div class="player-expanded-scroll" id="player-expanded-scroll">
@@ -586,7 +595,6 @@
                 <div class="rs-credits-card">
                     <div class="rs-card-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
                         <h4>Người tham gia thực hiện</h4>
-                        <button style="font-size:13px; color:#b3b3b3; background:none; border:none; cursor:pointer;">Hiện tất cả</button>
                     </div>
                     <div class="rs-credits-list" id="rs-credits-list">
                         <div class="rs-credit-item">
@@ -597,7 +605,6 @@
                                 <div class="rs-credit-name" id="rs-credit-artist">Nghệ sĩ chưa rõ</div>
                                 <div class="rs-credit-role">Nghệ Sĩ Chính</div>
                             </div>
-                            <button class="rs-follow-btn">Theo dõi</button>
                         </div>
                     </div>
                 </div>

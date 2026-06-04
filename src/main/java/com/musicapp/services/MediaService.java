@@ -147,6 +147,7 @@ public class MediaService {
         item.setUploadedByUserId(uploadedByUserId);
         item.setApprovalStatus(adminUpload ? MediaApprovalStatus.APPROVED : MediaApprovalStatus.PENDING);
         item.setCreators(creators);
+        item.setArtist(displayArtist(artist, creators));
         mediaItemRepository.save(item);
 
         log.info("Saved media id={} title='{}' status={} uploader={}",
@@ -253,11 +254,23 @@ public class MediaService {
     }
 
     private String displayArtist(String fallbackArtist, List<CreatorProfile> creators) {
+        LinkedHashSet<String> names = new LinkedHashSet<>();
         if (creators != null && !creators.isEmpty()) {
-            return creators.stream().map(CreatorProfile::getStageName).collect(Collectors.joining(", "));
+            creators.stream()
+                    .map(CreatorProfile::getStageName)
+                    .map(this::blankToNull)
+                    .filter(name -> name != null)
+                    .forEach(names::add);
         }
-        String clean = fallbackArtist != null ? fallbackArtist.trim() : "";
-        return clean.isBlank() ? "Unknown Artist" : clean;
+        if (fallbackArtist != null) {
+            for (String name : fallbackArtist.split(",")) {
+                String clean = blankToNull(name);
+                if (clean != null) {
+                    names.add(clean);
+                }
+            }
+        }
+        return names.isEmpty() ? "Unknown Artist" : String.join(", ", names);
     }
 
     private String storePosterIfPresent(MultipartFile posterFile) throws IOException {

@@ -31,20 +31,14 @@ public class LoginCaptchaFilter extends OncePerRequestFilter {
         }
 
         HttpSession session = request.getSession(false);
-        String expectedCode = session != null
-                ? (String) session.getAttribute(ImageCaptchaService.SESSION_ATTRIBUTE)
-                : null;
         String submittedCode = request.getParameter("captchaCode");
+        String captchaToken = request.getParameter(ImageCaptchaService.TOKEN_REQUEST_PARAM);
 
-        if (!captchaService.verify(submittedCode, expectedCode)) {
-            if (session != null) {
-                session.removeAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
-            }
+        if (!captchaService.verifyAndConsume(session, submittedCode, captchaToken)) {
             response.sendRedirect(request.getContextPath() + "/login?captchaError");
             return;
         }
 
-        session.removeAttribute(ImageCaptchaService.SESSION_ATTRIBUTE);
         filterChain.doFilter(request, response);
     }
 }

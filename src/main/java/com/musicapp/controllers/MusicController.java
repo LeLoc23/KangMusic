@@ -76,13 +76,40 @@ public class MusicController {
     // ── Trang chủ ─────────────────────────────────────────────────────────────
     @GetMapping("/")
     public String homePage(
-            @RequestParam(required = false, defaultValue = "") String query,
+            @RequestParam(value = "query", required = false) String query,
             @RequestParam(required = false, defaultValue = "") String genre,
             @RequestParam(required = false, defaultValue = "0") int page,
             HttpServletRequest request,
             Authentication auth,
             Model model) {
 
+        return renderHomePage(normalizeQuery(query), genre, page, request, auth, model);
+    }
+
+    // ── Search page: do not hit the database for empty search terms ───────────
+    @GetMapping("/search")
+    public String searchPage(
+            @RequestParam(value = "query", required = false) String query,
+            @RequestParam(required = false, defaultValue = "") String genre,
+            @RequestParam(required = false, defaultValue = "0") int page,
+            HttpServletRequest request,
+            Authentication auth,
+            Model model) {
+
+        String normalizedQuery = normalizeQuery(query);
+        if (normalizedQuery == null) {
+            return "redirect:/";
+        }
+
+        return renderHomePage(normalizedQuery, genre, page, request, auth, model);
+    }
+
+    private String renderHomePage(String query,
+                                  String genre,
+                                  int page,
+                                  HttpServletRequest request,
+                                  Authentication auth,
+                                  Model model) {
         if (page < 0) page = 0;
         Long userId = resolveUserId(auth);
 
@@ -111,6 +138,14 @@ public class MusicController {
         }
 
         return (request.getHeader("HX-Request") != null) ? "index :: main-content" : "index";
+    }
+
+    private String normalizeQuery(String query) {
+        if (query == null) {
+            return null;
+        }
+        String trimmed = query.trim();
+        return trimmed.isEmpty() ? null : trimmed;
     }
 
     // ── Upload form ───────────────────────────────────────────────────────────
@@ -216,8 +251,13 @@ public class MusicController {
     // ── API: Tìm kiếm gợi ý — S3/S4 FIX: returns DTO, not raw entity ──────────
     @GetMapping("/api/search")
     @ResponseBody
-    public List<MediaItemDto> searchSuggestions(@RequestParam String q) {
-        return mediaService.findPaginated(q, org.springframework.data.domain.PageRequest.of(0, 5))
+    public List<MediaItemDto> searchSuggestions(@RequestParam(value = "q", required = false) String q) {
+        String normalizedQuery = normalizeQuery(q);
+        if (normalizedQuery == null) {
+            return List.of();
+        }
+
+        return mediaService.findPaginated(normalizedQuery, org.springframework.data.domain.PageRequest.of(0, 5))
                 .getContent().stream().map(MediaItemDto::from).toList();
     }
 
