@@ -37,8 +37,12 @@ build/
 ### VS Code ###
 .vscode/
 
-### Media Uploads ###
-src/main/resources/static/media/*mp4
+### Runtime uploads and local data ###
+uploads/
+music_data/
+src/main/resources/static/media/
+*.mv.db
+*.trace.db
 
 ### Office temporary files ###
 ~$*.docx
