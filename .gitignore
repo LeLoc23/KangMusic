@@ -40,3 +40,6 @@ build/
 ### Media Uploads ###
 src/main/resources/static/media/*mp4
 
+### Office temporary files ###
+~$*.docx
+
