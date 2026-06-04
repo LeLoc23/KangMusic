@@ -17,7 +17,9 @@ import jakarta.persistence.Table;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Set;
 import java.util.stream.Collectors;
+
 
 @Entity
 @Table(
@@ -185,6 +187,26 @@ public class MediaItem {
         return creators.stream()
                 .map(CreatorProfile::getStageName)
                 .collect(Collectors.joining(", "));
+    }
+
+    public String getManualArtist() {
+        if (artist == null || artist.isBlank()) return "";
+        if (creators == null || creators.isEmpty()) return artist;
+        
+        Set<String> creatorStageNames = creators.stream()
+                .map(CreatorProfile::getStageName)
+                .filter(name -> name != null && !name.isBlank())
+                .map(name -> name.trim().toLowerCase())
+                .collect(Collectors.toSet());
+        
+        List<String> manuals = new ArrayList<>();
+        for (String part : artist.split(",")) {
+            String trimmed = part.trim();
+            if (!trimmed.isEmpty() && !creatorStageNames.contains(trimmed.toLowerCase())) {
+                manuals.add(trimmed);
+            }
+        }
+        return String.join(", ", manuals);
     }
 
     public LyricsStatus getLyricsStatus() { return lyricsStatus; }

@@ -1,8 +1,17 @@
 package com.musicapp.services;
 
 import com.musicapp.exception.WeakPasswordException;
+import com.musicapp.models.CreatorProfile;
+import com.musicapp.models.MediaItem;
+import com.musicapp.models.Playlist;
 import com.musicapp.models.User;
+import com.musicapp.repositories.CreatorProfileRepository;
+import com.musicapp.repositories.MediaCommentRepository;
+import com.musicapp.repositories.MediaItemRepository;
+import com.musicapp.repositories.PlayHistoryRepository;
+import com.musicapp.repositories.PlaylistRepository;
 import com.musicapp.repositories.UserRepository;
+import com.musicapp.repositories.UserLibraryRepository;
 import org.springframework.security.authentication.BadCredentialsException;
 import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -21,10 +30,29 @@ public class UserService {
     private static final String PASSWORD_PATTERN = "^(?=.*[A-Z])(?=.*[0-9])(?=.*[!@#$%^&*()_+\\-=\\[\\]{};':,./<>?]).{8,}$";
 
     private final UserRepository userRepository;
+    private final CreatorProfileRepository creatorProfileRepository;
+    private final MediaCommentRepository mediaCommentRepository;
+    private final MediaItemRepository mediaItemRepository;
+    private final PlayHistoryRepository playHistoryRepository;
+    private final PlaylistRepository playlistRepository;
+    private final UserLibraryRepository userLibraryRepository;
     private final PasswordEncoder passwordEncoder;
 
-    public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public UserService(UserRepository userRepository,
+                       CreatorProfileRepository creatorProfileRepository,
+                       MediaCommentRepository mediaCommentRepository,
+                       MediaItemRepository mediaItemRepository,
+                       PlayHistoryRepository playHistoryRepository,
+                       PlaylistRepository playlistRepository,
+                       UserLibraryRepository userLibraryRepository,
+                       PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.creatorProfileRepository = creatorProfileRepository;
+        this.mediaCommentRepository = mediaCommentRepository;
+        this.mediaItemRepository = mediaItemRepository;
+        this.playHistoryRepository = playHistoryRepository;
+        this.playlistRepository = playlistRepository;
+        this.userLibraryRepository = userLibraryRepository;
         this.passwordEncoder = passwordEncoder;
     }
 
@@ -104,9 +132,36 @@ public class UserService {
     public void deleteUser(Long id, String currentUsername) {
         userRepository.findById(id).ifPresent(target -> {
             if (!target.getUsername().equals(currentUsername)) {
-                userRepository.deleteById(id);
+                deleteUserDependencies(id);
+                userRepository.delete(target);
             }
         });
+    }
+
+    private void deleteUserDependencies(Long userId) {
+        creatorProfileRepository.findByUserId(userId).ifPresent(this::deleteCreatorProfile);
+        mediaCommentRepository.deleteByUserId(userId);
+        userLibraryRepository.deleteByUserId(userId);
+        playHistoryRepository.deleteByUserId(userId);
+        deleteUserPlaylists(userId);
+        mediaItemRepository.clearUploaderByUserId(userId);
+        userRepository.flush();
+    }
+
+    private void deleteCreatorProfile(CreatorProfile profile) {
+        List<MediaItem> linkedMedia = mediaItemRepository.findAllLinkedToCreator(profile.getId());
+        linkedMedia.forEach(media ->
+                media.getCreators().removeIf(creator -> profile.getId().equals(creator.getId())));
+        mediaItemRepository.saveAll(linkedMedia);
+        mediaItemRepository.flush();
+        creatorProfileRepository.delete(profile);
+        creatorProfileRepository.flush();
+    }
+
+    private void deleteUserPlaylists(Long userId) {
+        List<Playlist> rootPlaylists = playlistRepository.findByUserIdAndParentNullOrderByCreatedAtDesc(userId);
+        playlistRepository.deleteAll(rootPlaylists);
+        playlistRepository.flush();
     }
 
     private void validatePasswordStrength(String password) {

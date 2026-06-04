@@ -39,6 +39,9 @@ public class AiController {
             return ResponseEntity.status(404).body(Map.of("error", "media_not_found"));
         }
         String answer = openAiService.chatAboutMedia(media, finalQuestion);
+        if (answer == null || answer.isBlank()) {
+            answer = "AI chưa có câu trả lời phù hợp.";
+        }
         return ResponseEntity.ok(Map.of("answer", answer));
     }
 }

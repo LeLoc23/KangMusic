@@ -112,10 +112,34 @@ public interface MediaItemRepository extends JpaRepository<MediaItem, Long> {
            """)
     List<MediaItem> findByCreatorIdActive(@Param("creatorId") Long creatorId);
 
+    @Query("""
+           SELECT DISTINCT m FROM MediaItem m
+           LEFT JOIN m.creators c
+           WHERE (m.uploadedByUserId = :userId OR c.id = :creatorId)
+             AND m.deleted = false
+           ORDER BY m.uploadedAt DESC
+           """)
+    List<MediaItem> findByCreatorOrUploader(@Param("creatorId") Long creatorId, @Param("userId") Long userId);
+
+    @Query("""
+           SELECT DISTINCT m FROM MediaItem m
+           JOIN m.creators c
+           WHERE c.id = :creatorId
+           """)
+    List<MediaItem> findAllLinkedToCreator(@Param("creatorId") Long creatorId);
+
+    @Modifying
+    @Query("UPDATE MediaItem m SET m.uploadedByUserId = null WHERE m.uploadedByUserId = :userId")
+    int clearUploaderByUserId(@Param("userId") Long userId);
+
     @Modifying
     @Transactional
     @Query("UPDATE MediaItem m SET m.playCount = m.playCount + 1 WHERE m.id = :id AND m.deleted = false AND m.approvalStatus = com.musicapp.models.MediaApprovalStatus.APPROVED")
     int incrementPlayCount(@Param("id") Long id);
+
+    Optional<MediaItem> findByFileNameAndDeletedFalse(String fileName);
+
+    Optional<MediaItem> findByPosterFilenameAndDeletedFalse(String posterFilename);
 
     @Query("SELECT m.fileName FROM MediaItem m WHERE m.deleted = true")
     List<String> findFileKeysOfDeletedItems();

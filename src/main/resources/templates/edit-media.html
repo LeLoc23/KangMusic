@@ -24,13 +24,13 @@
 
                     <div th:if="${isAdminUpload}">
                         <label>Ca sĩ / Nghệ sĩ</label>
-                        <input type="text" name="artist" th:value="${media.artist}" placeholder="Nhập thủ công nếu chưa có Creator/Singer">
+                        <input type="text" name="artist" th:value="${media.getManualArtist()}" placeholder="Nhập thủ công nếu chưa có Creator/Singer">
                     </div>
                     <div th:unless="${isAdminUpload}">
                         <label>Ca sĩ / Nghệ sĩ</label>
-                        <input type="hidden" name="artist" th:value="${currentCreator != null ? currentCreator.stageName : media.artist}">
+                        <input type="hidden" name="artist" th:value="${media.getManualArtist()}">
                         <div style="padding:10px 14px; background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); border-radius:8px; color:#fff; margin-bottom:16px;"
-                             th:text="${currentCreator != null ? currentCreator.stageName : media.artist}">Creator/Singer</div>
+                             th:text="${media.artist}">Creator/Singer</div>
                     </div>
 
                     <label>Creator/Singer trình bày hoặc feat</label>

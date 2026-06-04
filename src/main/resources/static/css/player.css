@@ -481,6 +481,25 @@ html.sidebar-state-restoring .right-sidebar {
 .view-ai-chat .rs-header-tabs { display: none !important; }
 .view-ai-chat .rs-header-ai { display: flex !important; animation: rsFadeIn 0.3s ease both; }
 
+.view-ai-chat .rs-view-ai-chat {
+    min-height: 0 !important;
+}
+
+.view-ai-chat .rs-view-ai-chat .right-sidebar-scroll-container {
+    min-height: 0;
+}
+
+.view-ai-chat #rs-ai-chat-log {
+    flex: 1;
+}
+
+.view-ai-chat #rs-ai-form {
+    flex-shrink: 0;
+    margin-bottom: var(--player-height) !important;
+    box-shadow: 0 -12px 24px rgba(18,18,18,0.85);
+    z-index: 2;
+}
+
 /* Animations for AI chat open/close */
 @keyframes rsSlideIn {
     from {

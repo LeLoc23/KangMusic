@@ -180,8 +180,13 @@ public class MediaService {
         MediaItem item = mediaItemRepository.findByIdAndDeletedFalse(id)
                 .orElseThrow(() -> new IllegalArgumentException("media_not_found"));
 
-        if (!adminEdit && (item.getUploadedByUserId() == null || !item.getUploadedByUserId().equals(currentUserId))) {
-            throw new IllegalArgumentException("access_denied");
+        if (!adminEdit) {
+            boolean isUploader = item.getUploadedByUserId() != null && item.getUploadedByUserId().equals(currentUserId);
+            boolean isCreator = item.getCreators().stream()
+                    .anyMatch(cp -> cp.getUser() != null && cp.getUser().getId().equals(currentUserId));
+            if (!isUploader && !isCreator) {
+                throw new IllegalArgumentException("access_denied");
+            }
         }
 
         List<CreatorProfile> creators = resolveCreators(creatorIds);
@@ -216,6 +221,12 @@ public class MediaService {
     public List<MediaItem> findByCreatorIdActive(Long creatorId) {
         return mediaItemRepository.findByCreatorIdActive(creatorId);
     }
+
+    @Transactional(readOnly = true)
+    public List<MediaItem> findByCreatorOrUploader(Long creatorId, Long userId) {
+        return mediaItemRepository.findByCreatorOrUploader(creatorId, userId);
+    }
+
 
     public List<MediaItem> findAllActiveList() {
         return mediaItemRepository.findAllActiveList();

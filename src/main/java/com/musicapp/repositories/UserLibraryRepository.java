@@ -2,6 +2,7 @@ package com.musicapp.repositories;
 
 import com.musicapp.models.UserLibrary;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Modifying;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
@@ -22,4 +23,8 @@ public interface UserLibraryRepository extends JpaRepository<UserLibrary, Long> 
     /** Lấy tập hợp mediaItemId đã yêu thích — dùng để highlight nút ♡ trên card. */
     @Query("SELECT ul.mediaItem.id FROM UserLibrary ul WHERE ul.userId = :userId")
     Set<Long> findLikedMediaIds(@Param("userId") Long userId);
+
+    @Modifying
+    @Query("DELETE FROM UserLibrary ul WHERE ul.userId = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 }

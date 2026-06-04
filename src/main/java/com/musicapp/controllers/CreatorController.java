@@ -30,7 +30,7 @@ public class CreatorController {
         }
         Long userId = userService.getUserIdByUsername(auth.getName());
         model.addAttribute("creatorProfile", profile);
-        model.addAttribute("creatorMedia", mediaService.findByUploader(userId));
+        model.addAttribute("creatorMedia", mediaService.findByCreatorOrUploader(profile.getId(), userId));
         return (request.getHeader("HX-Request") != null) ? "creator :: main-content" : "creator";
     }
 }

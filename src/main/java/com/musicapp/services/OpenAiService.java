@@ -230,13 +230,19 @@ public class OpenAiService {
     }
 
     private String createChatCompletion(List<Map<String, String>> messages, int maxTokens) {
+        return createChatCompletion(messages, maxTokens, null);
+    }
+
+    private String createChatCompletion(List<Map<String, String>> messages, int maxTokens, Map<String, Object> extraBody) {
         try {
-            Map<String, Object> payload = Map.of(
-                    "model", model,
-                    "messages", messages,
-                    "temperature", 0.4,
-                    "max_completion_tokens", maxTokens
-            );
+            Map<String, Object> payload = new LinkedHashMap<>();
+            payload.put("model", model);
+            payload.put("messages", messages);
+            payload.put("temperature", 0.4);
+            payload.put("max_completion_tokens", maxTokens);
+            if (extraBody != null) {
+                payload.putAll(extraBody);
+            }
 
             HttpRequest request = HttpRequest.newBuilder()
                     .uri(URI.create(apiUrl))
@@ -252,14 +258,35 @@ public class OpenAiService {
             }
 
             JsonNode root = objectMapper.readTree(response.body());
-            JsonNode content = root.path("choices").path(0).path("message").path("content");
-            return content.isMissingNode() || content.isNull()
-                    ? "AI chưa có câu trả lời phù hợp."
-                    : content.asText();
+            String text = extractMessageContent(root.path("choices").path(0).path("message"));
+            return text.isBlank() ? "AI chưa có câu trả lời phù hợp." : text;
         } catch (Exception e) {
             log.warn("OpenAI request error: {}", e.getMessage());
             return "Hiện tại AI chưa phản hồi được. Vui lòng thử lại sau.";
         }
+    }
+
+    private String extractMessageContent(JsonNode message) {
+        JsonNode content = message.path("content");
+        if (content.isMissingNode() || content.isNull()) {
+            return "";
+        }
+        if (content.isTextual()) {
+            return content.asText();
+        }
+        if (content.isArray()) {
+            StringBuilder sb = new StringBuilder();
+            for (JsonNode part : content) {
+                if (part.has("text")) {
+                    if (!sb.isEmpty()) {
+                        sb.append('\n');
+                    }
+                    sb.append(part.path("text").asText(""));
+                }
+            }
+            return sb.toString();
+        }
+        return content.asText("");
     }
 
     private List<Long> extractIds(String content) {

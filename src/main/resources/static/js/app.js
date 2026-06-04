@@ -734,6 +734,39 @@ document.addEventListener('DOMContentLoaded', () => {
     const VIDEO_ICON = 'movie';
     const AUDIO_ICON = 'music_note';
 
+    function normalizePosterValue(poster) {
+        const value = String(poster ?? '').trim();
+        if (!value || value === 'null' || value === 'undefined') return '';
+        if (value.startsWith('/stream/')) {
+            return decodeURIComponent(value.slice('/stream/'.length));
+        }
+        if (value.startsWith('stream/')) {
+            return decodeURIComponent(value.slice('stream/'.length));
+        }
+
+        try {
+            const url = new URL(value, window.location.origin);
+            if (url.origin === window.location.origin && url.pathname.startsWith('/stream/')) {
+                return decodeURIComponent(url.pathname.slice('/stream/'.length));
+            }
+        } catch {
+            // Plain storage keys are not valid absolute URLs.
+        }
+
+        return value;
+    }
+
+    function posterToSrc(poster) {
+        const value = normalizePosterValue(poster);
+        if (!value) return '';
+        if (/^(https?:|data:|blob:)/i.test(value) || value.startsWith('/')) return value;
+        return `/stream/${encodeURIComponent(value)}`;
+    }
+
+    function cssUrl(value) {
+        return `url("${String(value).replace(/"/g, '%22')}")`;
+    }
+
     function setTrackTypeIcon(el, type) {
         setSymbol(el, type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON);
     }
@@ -805,8 +838,9 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function setExpandedBackdropImage(poster) {
         if (!expandedOverlay) return;
-        if (poster && poster !== 'null') {
-            expandedOverlay.style.setProperty('--expanded-backdrop-image', `url('/stream/${poster}')`);
+        const posterSrc = posterToSrc(poster);
+        if (posterSrc) {
+            expandedOverlay.style.setProperty('--expanded-backdrop-image', cssUrl(posterSrc));
             expandedOverlay.classList.add('has-backdrop');
         } else {
             expandedOverlay.style.removeProperty('--expanded-backdrop-image');
@@ -857,8 +891,9 @@ document.addEventListener('DOMContentLoaded', () => {
         } else {
             clearExpandedVideo();
             if (expandedCoverImg && expandedCoverIcon) {
-                if (track.poster && track.poster !== 'null') {
-                    expandedCoverImg.src = `/stream/${track.poster}`;
+                const posterSrc = posterToSrc(track.poster);
+                if (posterSrc) {
+                    expandedCoverImg.src = posterSrc;
                     expandedCoverImg.style.display = 'block';
                     expandedCoverIcon.style.display = 'none';
                 } else {
@@ -1268,8 +1303,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncMiniPopupVideoWithAudio(true);
             } else if (dom.coverImg && dom.coverIcon) {
                 clearMiniPopupVideo(dom);
-                if (track.poster && track.poster !== 'null') {
-                    dom.coverImg.src = `/stream/${track.poster}`;
+                const posterSrc = posterToSrc(track.poster);
+                if (posterSrc) {
+                    dom.coverImg.src = posterSrc;
                     dom.coverImg.style.display = 'block';
                     dom.coverIcon.style.display = 'none';
                 } else {
@@ -1330,8 +1366,9 @@ document.addEventListener('DOMContentLoaded', () => {
                 syncMiniInlineVideoWithAudio(true);
             } else if (miniCoverImg && miniCoverIcon) {
                 clearMiniInlineVideo();
-                if (track.poster && track.poster !== 'null') {
-                    miniCoverImg.src = `/stream/${track.poster}`;
+                const posterSrc = posterToSrc(track.poster);
+                if (posterSrc) {
+                    miniCoverImg.src = posterSrc;
                     miniCoverImg.style.display = 'block';
                     miniCoverIcon.style.display = 'none';
                 } else {
@@ -1421,7 +1458,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     genre: t.genre || '',
                     emotion: t.emotion || '',
                     lyrics: t.lyrics || '',
-                    poster: t.poster || ''
+                    poster: normalizePosterValue(t.poster || '')
                 }));
         } catch {
             return [];
@@ -1443,6 +1480,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Play a track object ────────────────────────────────────────────────
     function playTrack(track) {
         if (!track) return;
+        track.poster = normalizePosterValue(track.poster);
         currentTrack = track;
 
         container.classList.remove('hidden');
@@ -1452,8 +1490,9 @@ document.addEventListener('DOMContentLoaded', () => {
         artistEl.textContent = track.artist;
         
         const posterImg = document.getElementById('player-poster-img');
-        if (track.poster && track.poster !== 'null') {
-            posterImg.src = '/stream/' + track.poster;
+        const posterSrc = posterToSrc(track.poster);
+        if (posterSrc) {
+            posterImg.src = posterSrc;
             posterImg.style.display = 'block';
             artworkIcon.style.display = 'none';
         } else {
@@ -1512,11 +1551,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const rsGlow = document.getElementById('rs-cover-glow');
         const rsIcon = document.getElementById('rs-cover-icon');
         const rsPoster = document.getElementById('rs-poster-img');
-        if (track.poster && track.poster !== 'null') {
-            rsGlow.style.backgroundImage = `url('/stream/${track.poster}')`;
+        const posterSrc = posterToSrc(track.poster);
+        if (posterSrc) {
+            rsGlow.style.backgroundImage = cssUrl(posterSrc);
             rsGlow.style.opacity = '1';
             if (rsPoster) {
-                rsPoster.src = `/stream/${track.poster}`;
+                rsPoster.src = posterSrc;
                 rsPoster.style.display = 'block';
             }
             rsIcon.style.display = 'none';
@@ -1570,7 +1610,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     genre: t.genre || "",
                     emotion: t.emotion || "",
                     lyrics: t.lyrics || "",
-                    poster: t.poster || ""
+                    poster: normalizePosterValue(t.poster || t.posterSrc || "")
                 }))
                 .filter(t => !!t.src);
 
@@ -1603,7 +1643,7 @@ document.addEventListener('DOMContentLoaded', () => {
             genre:   btn.dataset.genre || '',
             emotion: btn.dataset.emotion || '',
             lyrics:  btn.dataset.lyrics || '',
-            poster:  btn.dataset.poster || ''
+            poster:  normalizePosterValue(btn.dataset.poster || '')
         };
     }
 
@@ -2030,6 +2070,13 @@ document.addEventListener('DOMContentLoaded', () => {
 
     audio.addEventListener('ended', () => playNext());
 
+    // ── Handle stream errors (deleted/rejected songs) ───────────────────
+    audio.addEventListener('error', () => {
+        if (!audio.src || audio.src === location.href) return;
+        showToast('Bài hát không khả dụng hoặc đã bị xóa. Chuyển bài...');
+        setTimeout(() => playNext(), 1200);
+    });
+
     // ── Auto-next logic ────────────────────────────────────────────────────
     function playNext() {
         if (repeatMode === 'one') {
@@ -2078,7 +2125,7 @@ document.addEventListener('DOMContentLoaded', () => {
                     artist:  i.artist,
                     // S3/S4 FIX: DTO provides 'src' directly — no raw fileName exposed
                     src:     i.src,
-                    poster:  i.posterSrc || '',
+                    poster:  normalizePosterValue(i.posterSrc || ''),
                     type:    i.type,
                     genre:   i.genre || '',
                     emotion: i.emotionLabel || ''
@@ -2102,8 +2149,9 @@ document.addEventListener('DOMContentLoaded', () => {
         item.className = isNow ? 'queue-now-track' : 'queue-item';
         const safeTrack = track && typeof track === 'object' ? track : {};
         const emoji = safeTrack.type === 'VIDEO' ? VIDEO_ICON : AUDIO_ICON;
-        const thumbHTML = safeTrack.poster 
-            ? `<img src="/stream/${safeTrack.poster}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">` 
+        const posterSrc = posterToSrc(safeTrack.poster);
+        const thumbHTML = posterSrc
+            ? `<img src="${posterSrc}" style="width:100%; height:100%; object-fit:cover; border-radius:4px; display:block;">`
             : symbolHTML(emoji);
         item.innerHTML = `
             <div class="queue-item-thumb" style="display:flex; justify-content:center; align-items:center; overflow:hidden;">${thumbHTML}</div>
@@ -2383,10 +2431,12 @@ document.addEventListener('DOMContentLoaded', () => {
             container.classList.remove('hidden');
             container.style.display = 'flex';
             titleEl.textContent  = track.title;
+            artistEl.textContent = track.artist || '-';
             const posterImg = document.getElementById('player-poster-img');
-            if (track.poster && track.poster !== 'null') {
+            const posterSrc = posterToSrc(track.poster);
+            if (posterSrc) {
                 if (posterImg) {
-                    posterImg.src = '/stream/' + track.poster;
+                    posterImg.src = posterSrc;
                     posterImg.style.display = 'block';
                 }
                 artworkIcon.style.display = 'none';
@@ -2637,40 +2687,48 @@ document.addEventListener('DOMContentLoaded', () => {
         persistRightSidebarView(viewName);
     }
 
-    // Click on "Đặt câu hỏi" button — uses event delegation
-    document.body.addEventListener('click', (e) => {
-        const btnAskAi = e.target.closest('#btn-track-ask-ai');
-        if (!btnAskAi) return;
-        e.preventDefault();
-        e.stopPropagation();
+    function resolveTrackAiMediaId() {
+        const aiForm = document.getElementById('rs-ai-form');
+        if (aiForm?.dataset?.mediaId) return aiForm.dataset.mediaId;
+        const btn = document.getElementById('btn-track-ask-ai');
+        return btn?.dataset?.id || '';
+    }
 
-        const mediaId = btnAskAi.dataset.id;
-        const mediaType = btnAskAi.dataset.type;
-        if (!mediaId) return;
+    function bindTrackAiFormSubmit(aiForm) {
+        if (!aiForm || aiForm.dataset.submitInit) return;
+        aiForm.dataset.submitInit = 'true';
+        aiForm.addEventListener('submit', (ev) => {
+            ev.preventDefault();
+            const aiInput = document.getElementById('rs-ai-input');
+            const q = aiInput?.value?.trim();
+            if (!q) return;
+            aiInput.value = '';
+            doAskAi(q);
+        });
+    }
 
-        // Show sidebar & switch to AI chat view
+    function openTrackAiChat(mediaId, mediaType, options = {}) {
+        const { focusInput = true, resetIfNewTrack = true } = options;
+        if (!mediaId) return false;
+
         const sidebar = document.getElementById('right-sidebar');
         if (sidebar) {
             setRightSidebarCollapsed(false);
             setSidebarViewForAi('ai-chat');
         }
 
-        // Set title in sidebar
         const titleEl = document.getElementById('rs-ai-title');
         if (titleEl) {
             titleEl.textContent = mediaType === 'VIDEO' ? 'Hỏi về video này' : 'Hỏi về bài hát này';
         }
 
-        // Get chat elements
         const aiForm = document.getElementById('rs-ai-form');
         const chatLog = document.getElementById('rs-ai-chat-log');
         const greetingBox = document.getElementById('rs-ai-greeting');
         const suggestionsBox = document.getElementById('rs-ai-suggestions-box');
+        if (!aiForm || !chatLog) return false;
 
-        if (!aiForm || !chatLog) return;
-
-        // If switching tracks, clear conversation
-        if (aiForm.dataset.mediaId !== mediaId) {
+        if (resetIfNewTrack && aiForm.dataset.mediaId !== mediaId) {
             aiForm.dataset.mediaId = mediaId;
             chatLog.innerHTML = '';
             if (greetingBox) {
@@ -2679,19 +2737,41 @@ document.addEventListener('DOMContentLoaded', () => {
             if (suggestionsBox) {
                 suggestionsBox.style.display = 'block';
             }
+        } else {
+            aiForm.dataset.mediaId = mediaId;
         }
 
-        // Set up form submit handler (bind once)
-        if (!aiForm.dataset.submitInit) {
-            aiForm.dataset.submitInit = "true";
-            aiForm.addEventListener('submit', (ev) => {
-                ev.preventDefault();
-                const aiInput = document.getElementById('rs-ai-input');
-                const q = aiInput?.value?.trim();
-                if (!q) return;
-                aiInput.value = '';
-                doAskAi(q);
-            });
+        bindTrackAiFormSubmit(aiForm);
+        if (focusInput) {
+            document.getElementById('rs-ai-input')?.focus({ preventScroll: true });
+        }
+        return true;
+    }
+
+    function syncTrackAiMediaFromPage() {
+        const btn = document.getElementById('btn-track-ask-ai');
+        if (!btn?.dataset?.id) return;
+        const aiForm = document.getElementById('rs-ai-form');
+        if (!aiForm) return;
+        const sidebar = document.getElementById('right-sidebar');
+        if (sidebar?.classList.contains('view-ai-chat') && aiForm.dataset.mediaId !== btn.dataset.id) {
+            openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false });
+        }
+    }
+
+    // Click on "Đặt câu hỏi" button — uses event delegation
+    document.body.addEventListener('click', (e) => {
+        const btnAskAi = e.target.closest('#btn-track-ask-ai');
+        if (!btnAskAi) return;
+        e.preventDefault();
+        e.stopPropagation();
+        openTrackAiChat(btnAskAi.dataset.id, btnAskAi.dataset.type);
+    });
+
+    document.body.addEventListener('htmx:afterSwap', (e) => {
+        const target = e.detail?.target || e.target;
+        if (target?.id === 'main-content') {
+            syncTrackAiMediaFromPage();
         }
     });
 
@@ -2700,8 +2780,18 @@ document.addEventListener('DOMContentLoaded', () => {
         const aiForm = document.getElementById('rs-ai-form');
         const chatLog = document.getElementById('rs-ai-chat-log');
         const suggestionsBox = document.getElementById('rs-ai-suggestions-box');
-        const mediaId = aiForm?.dataset?.mediaId;
-        if (!q || !mediaId || !chatLog) return;
+
+        const btn = document.getElementById('btn-track-ask-ai');
+        const mediaId = resolveTrackAiMediaId();
+        if (!mediaId) return;
+
+        if (btn?.dataset?.id) {
+            openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false, resetIfNewTrack: false });
+        } else if (aiForm) {
+            aiForm.dataset.mediaId = mediaId;
+        }
+
+        if (!q || !chatLog) return;
 
         const userMsg = document.createElement('div');
         userMsg.className = 'rs-ai-msg user';
@@ -2726,22 +2816,39 @@ document.addEventListener('DOMContentLoaded', () => {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/x-www-form-urlencoded',
-                'X-XSRF-TOKEN': typeof getCsrfToken === 'function' ? getCsrfToken() : ''
+                ...(typeof getCsrfHeaders === 'function' ? getCsrfHeaders() : {})
             },
+            credentials: 'same-origin',
             body
         })
-        .then(res => res.json().catch(() => ({})))
+        .then(async res => {
+            const contentType = res.headers.get('content-type') || '';
+            const data = contentType.includes('application/json')
+                ? await res.json().catch(() => ({}))
+                : {};
+            if (!res.ok) {
+                const message = data.error || (res.status === 403
+                    ? 'Phiên xác minh đã hết hạn. Hãy tải lại trang rồi thử lại.'
+                    : 'Không thể gửi câu hỏi lúc này.');
+                throw new Error(message);
+            }
+            if (!contentType.includes('application/json')) {
+                throw new Error('AI chưa trả về dữ liệu hợp lệ. Hãy tải lại trang rồi thử lại.');
+            }
+            return data;
+        })
         .then(data => {
-            if (data.answer) {
-                botMsg.innerHTML = data.answer.replace(/\n/g, '<br>');
+            const answer = (data.answer || '').trim();
+            if (answer) {
+                botMsg.innerHTML = answer.replace(/\n/g, '<br>');
             } else {
-                botMsg.innerHTML = `<span style="color: #ed4245;">${data.error || 'AI chưa có câu trả lời phù hợp.'}</span>`;
+                botMsg.innerHTML = '<span style="color: #ed4245;">AI chưa trả về nội dung. Vui lòng thử lại.</span>';
             }
             chatLog.scrollTop = chatLog.scrollHeight;
         })
         .catch(err => {
             console.warn('AI chat failed', err);
-            botMsg.innerHTML = '<span style="color: #ed4245;">Không thể kết nối AI lúc này. Vui lòng thử lại sau.</span>';
+            botMsg.innerHTML = `<span style="color: #ed4245;">${err.message || 'Không thể kết nối AI lúc này. Vui lòng thử lại sau.'}</span>`;
             chatLog.scrollTop = chatLog.scrollHeight;
         });
     }
@@ -2751,8 +2858,17 @@ document.addEventListener('DOMContentLoaded', () => {
         const chip = e.target.closest('.rs-ai-chip.track-ai-chip');
         if (!chip) return;
         e.stopPropagation();
+        const btn = document.getElementById('btn-track-ask-ai');
+        if (!btn?.dataset?.id) return;
+        openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false, resetIfNewTrack: false });
         doAskAi(chip.textContent.trim());
     });
+
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', syncTrackAiMediaFromPage, { once: true });
+    } else {
+        syncTrackAiMediaFromPage();
+    }
 
     // Close AI chat → animate out, then switch back to "playing" view
     document.body.addEventListener('click', (e) => {

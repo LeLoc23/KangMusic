@@ -1,5 +1,8 @@
 package com.musicapp.controllers;
 
+import com.musicapp.models.MediaApprovalStatus;
+import com.musicapp.models.MediaItem;
+import com.musicapp.repositories.MediaItemRepository;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Value;
@@ -22,6 +25,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
+import java.util.Optional;
 
 /**
  * Byte-range streaming controller — fixes audio seek bar.
@@ -42,8 +46,14 @@ public class StreamController {
     /** Maximum bytes served per partial request — prevents single-request abuse. */
     private static final long MAX_CHUNK_SIZE = 2 * 1024 * 1024L; // 2 MB
 
+    private final MediaItemRepository mediaItemRepository;
+
     @Value("${app.upload.dir}")
     private String uploadDir;
+
+    public StreamController(MediaItemRepository mediaItemRepository) {
+        this.mediaItemRepository = mediaItemRepository;
+    }
 
     @GetMapping("/stream/{filename}")
     public ResponseEntity<ResourceRegion> stream(
@@ -62,6 +72,22 @@ public class StreamController {
 
         if (!Files.exists(filePath)) {
             return ResponseEntity.notFound().build();
+        }
+
+        // ── DB check: only stream files belonging to active, approved items ────
+        Optional<MediaItem> itemOpt = mediaItemRepository.findByFileNameAndDeletedFalse(filename);
+        if (itemOpt.isEmpty()) {
+            // Also check poster files — they are streamed for cover art
+            itemOpt = mediaItemRepository.findByPosterFilenameAndDeletedFalse(filename);
+        }
+        if (itemOpt.isEmpty()) {
+            log.info("Stream blocked: file '{}' has no active media item in DB", filename);
+            return ResponseEntity.status(HttpStatus.GONE).build();
+        }
+        MediaItem item = itemOpt.get();
+        if (item.getApprovalStatus() != MediaApprovalStatus.APPROVED) {
+            log.info("Stream blocked: media item {} is not approved (status={})", item.getId(), item.getApprovalStatus());
+            return ResponseEntity.status(HttpStatus.GONE).build();
         }
 
         // ── Content-Type detection ─────────────────────────────────────────────

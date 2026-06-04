@@ -24,7 +24,7 @@
     <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Material+Symbols+Rounded:opsz,wght,FILL,GRAD@20..48,400..700,0..1,0">
     
     <script src="https://unpkg.com/htmx.org@1.9.10"></script>
-    <script defer th:src="@{/js/app.js(v=25)}"></script>
+    <script defer th:src="@{/js/app.js(v=26)}"></script>
 </head>
 <body>
 
@@ -97,7 +97,8 @@
                 <div class="dropdown-content dropdown-content-right">
                     <a th:href="@{/profile}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">👤 Hồ sơ cá nhân</a>
                     <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/admin}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">🛠️ Trang Quản Trị</a>
-                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">⬆️ Tải lên</a>    
+                    <a sec:authorize="hasAuthority('ROLE_ADMIN')" th:href="@{/add}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">⬆️ Tải lên</a>
+                    <a sec:authorize="hasAuthority('ROLE_CREATOR')" th:href="@{/creator}" hx-boost="false" hx-target="#main-content" hx-select="#main-content" hx-swap="innerHTML" hx-push-url="true">🛠️ Vào trang Creator</a>
                     <div class="dropdown-divider"></div>
                     <form th:action="@{/logout}" method="post" class="m-0" hx-boost="false">
                         <button type="submit" class="dropdown-logout w-full text-left">🚪 Đăng xuất</button>

@@ -87,4 +87,8 @@ public interface PlayHistoryRepository extends JpaRepository<PlayHistory, Long> 
     @Modifying
     @Query("DELETE FROM PlayHistory ph WHERE ph.playedAt < :cutoff")
     int deleteOlderThan(@Param("cutoff") LocalDateTime cutoff);
+
+    @Modifying
+    @Query("DELETE FROM PlayHistory ph WHERE ph.userId = :userId")
+    int deleteByUserId(@Param("userId") Long userId);
 }
