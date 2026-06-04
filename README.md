@@ -75,6 +75,12 @@ Profile mặc định là `dev`. File cấu hình chính:
 
 Khuyến nghị cấu hình bằng biến môi trường thay vì ghi key thật vào code:
 
+Project tự động import file `.env` ở thư mục gốc khi chạy local. Nếu chưa có file này, copy từ `.env.example` rồi điền key thật đã rotate:
+
+```powershell
+Copy-Item .env.example .env
+```
+
 ```properties
 DB_URL=jdbc:sqlserver://localhost:1433;databaseName=KangMusic;encrypt=true;trustServerCertificate=true
 DB_USERNAME=your_sqlserver_user
