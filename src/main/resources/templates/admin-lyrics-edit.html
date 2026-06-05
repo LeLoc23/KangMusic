@@ -34,7 +34,20 @@
                 <!-- Alert messages -->
                 <div th:if="${param.success}" class="alert alert-success">Lưu lời bài hát thành công!</div>
                 <div th:if="${param.error}" class="alert alert-danger">Có lỗi xảy ra khi lưu!</div>
-                <div th:if="${param.generating}" class="alert alert-info" id="generating-alert">Tự động sinh lời bằng AI đang chạy ngầm. Trang sẽ tự động tải lại khi hoàn thành...</div>
+                <div th:if="${param.generating != null or song.lyricsStatus.name() == 'PROCESSING'}" class="lyrics-generating-panel" id="generating-panel">
+                    <div class="lyrics-generating-header">
+                        <span class="lyrics-generating-spinner" aria-hidden="true"></span>
+                        <div>
+                            <strong>Sinh lời bằng AI (Whisper)</strong>
+                            <p class="lyrics-generating-sub" id="generating-message">Đang khởi tạo...</p>
+                        </div>
+                        <span class="lyrics-generating-percent" id="generating-percent">0%</span>
+                    </div>
+                    <div class="lyrics-progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" id="generating-progressbar">
+                        <div class="lyrics-progress-fill" id="generating-progress-fill" style="width: 0%;"></div>
+                    </div>
+                    <p class="lyrics-generating-hint">Trang sẽ tự động tải lại khi hoàn thành.</p>
+                </div>
 
                 <div class="admin-section">
                     <h3 style="margin-bottom:15px; display:flex; justify-content:space-between; align-items:center;">
@@ -171,6 +184,68 @@
 .alert-success { background-color: rgba(30, 215, 96, 0.2); border: 1px solid #1ed760; color: #1ed760; }
 .alert-danger { background-color: rgba(217, 83, 79, 0.2); border: 1px solid #d9534f; color: #d9534f; }
 .alert-info { background-color: rgba(91, 192, 222, 0.2); border: 1px solid #5bc0de; color: #5bc0de; }
+
+.lyrics-generating-panel {
+    background: rgba(91, 192, 222, 0.12);
+    border: 1px solid rgba(91, 192, 222, 0.45);
+    border-radius: 8px;
+    padding: 16px 20px;
+    margin-bottom: 20px;
+}
+.lyrics-generating-header {
+    display: flex;
+    align-items: center;
+    gap: 14px;
+    margin-bottom: 12px;
+}
+.lyrics-generating-header strong {
+    display: block;
+    color: #5bc0de;
+    font-size: 15px;
+}
+.lyrics-generating-sub {
+    margin: 4px 0 0;
+    font-size: 13px;
+    color: var(--sp-text-muted, #b3b3b3);
+}
+.lyrics-generating-percent {
+    margin-left: auto;
+    font-size: 18px;
+    font-weight: bold;
+    color: #5bc0de;
+    min-width: 48px;
+    text-align: right;
+}
+.lyrics-generating-spinner {
+    width: 28px;
+    height: 28px;
+    border: 3px solid rgba(91, 192, 222, 0.25);
+    border-top-color: #5bc0de;
+    border-radius: 50%;
+    animation: lyrics-spin 0.9s linear infinite;
+    flex-shrink: 0;
+}
+@keyframes lyrics-spin {
+    to { transform: rotate(360deg); }
+}
+.lyrics-progress-track {
+    height: 10px;
+    background: rgba(0, 0, 0, 0.35);
+    border-radius: 5px;
+    overflow: hidden;
+}
+.lyrics-progress-fill {
+    height: 100%;
+    background: linear-gradient(90deg, #0275d8, #5bc0de, #1ed760);
+    border-radius: 5px;
+    transition: width 0.4s ease;
+    min-width: 2%;
+}
+.lyrics-generating-hint {
+    margin: 10px 0 0;
+    font-size: 12px;
+    color: #888;
+}
 </style>
 
 <script th:inline="javascript">
@@ -279,26 +354,47 @@
         return true;
     }
 
-    // Polling Status Logic for AI Whisper
+    function updateGeneratingProgress(percent, message) {
+        const fill = document.getElementById("generating-progress-fill");
+        const percentEl = document.getElementById("generating-percent");
+        const messageEl = document.getElementById("generating-message");
+        const bar = document.getElementById("generating-progressbar");
+        const pct = Math.min(100, Math.max(0, percent || 0));
+        if (fill) fill.style.width = pct + "%";
+        if (percentEl) percentEl.textContent = pct + "%";
+        if (messageEl && message) messageEl.textContent = message;
+        if (bar) bar.setAttribute("aria-valuenow", String(pct));
+    }
+
+    // Polling status + progress for AI Whisper
     function checkPollingStatus() {
+        const panel = document.getElementById("generating-panel");
         const badge = document.getElementById("lyrics-status-badge");
-        if (badge && badge.textContent === "PROCESSING") {
-            const pollInterval = setInterval(() => {
-                fetch(`/api/songs/${songId}/lyrics/status`)
-                    .then(res => res.json())
-                    .then(data => {
-                        console.log("Polled lyrics status:", data.status);
-                        if (data.status !== "PROCESSING") {
-                            clearInterval(pollInterval);
-                            // Reload to get updated lyrics segments
-                            window.location.reload();
+        const isGenerating = panel || (badge && badge.textContent.trim() === "PROCESSING");
+        if (!isGenerating) return;
+
+        const poll = () => {
+            fetch(`/api/songs/${songId}/lyrics/status`)
+                .then(res => res.json())
+                .then(data => {
+                    if (data.status === "PROCESSING") {
+                        updateGeneratingProgress(data.percent ?? 0, data.message || "Đang xử lý...");
+                        if (badge) {
+                            badge.textContent = "PROCESSING";
+                            badge.className = "status-badge status-PROCESSING";
                         }
-                    })
-                    .catch(err => {
-                        console.error("Error polling lyrics status:", err);
-                    });
-            }, 2000);
-        }
+                        const btn = document.getElementById("btn-generate-ai");
+                        if (btn) btn.disabled = true;
+                    } else if (data.status === "READY" || data.status === "FAILED") {
+                        window.location.href = `/admin/songs/${songId}/lyrics/edit` +
+                            (data.status === "READY" ? "?success=true" : "?error=generate_failed");
+                    }
+                })
+                .catch(err => console.error("Error polling lyrics status:", err));
+        };
+
+        poll();
+        setInterval(poll, 1500);
     }
 /*]]>*/
 </script>

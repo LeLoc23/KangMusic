@@ -26,6 +26,10 @@ public class OpenAiTranscriptionService {
     private String apiKey;
 
     public String transcribe(File audioFile) {
+        return transcribe(audioFile, null);
+    }
+
+    public String transcribe(File audioFile, String songTitle) {
         try {
             // Read bytes from file
             byte[] fileBytes = Files.readAllBytes(audioFile.toPath());
@@ -46,6 +50,16 @@ public class OpenAiTranscriptionService {
             body.add("file", fileResource);
             body.add("model", "whisper-1");
             body.add("response_format", "verbose_json");
+
+            // Add prompt to guide Whisper to focus on song lyrics
+            String prompt = "Đây là lời bài hát.";
+            if (songTitle != null && !songTitle.isBlank()) {
+                prompt = "Đây là lời bài hát \"" + songTitle.trim() + "\".";
+            }
+            body.add("prompt", prompt);
+
+            // Set temperature to 0 to reduce hallucination
+            body.add("temperature", "0");
 
             HttpEntity<MultiValueMap<String, Object>> requestEntity = new HttpEntity<>(body, headers);
 

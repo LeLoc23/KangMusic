@@ -1536,8 +1536,26 @@ document.addEventListener('DOMContentLoaded', () => {
             updateMiniPlayer(track);
         }
 
+        syncPlayerAskAiButton(track);
+
         renderQueuePanel();
         saveQueue();
+    }
+
+    function syncPlayerAskAiButton(track) {
+        const btn = document.getElementById('btn-player-ask-ai');
+        if (!btn) return;
+        if (track?.id) {
+            btn.dataset.id = String(track.id);
+            btn.dataset.type = track.type || 'AUDIO';
+            btn.disabled = false;
+            btn.classList.remove('is-disabled');
+        } else {
+            delete btn.dataset.id;
+            delete btn.dataset.type;
+            btn.disabled = true;
+            btn.classList.add('is-disabled');
+        }
     }
 
     function updateNowPlayingSidebar(track) {
@@ -2469,6 +2487,7 @@ document.addEventListener('DOMContentLoaded', () => {
             totalTimeEl.textContent = track.duration ? fmt(track.duration) : '0:00';
             currentTrack = track;
             updateNowPlayingSidebar(track);
+            syncPlayerAskAiButton(track);
             fetchAndLoadLyrics(track.id);
         }
     }
@@ -2629,6 +2648,8 @@ document.addEventListener('DOMContentLoaded', () => {
         if (btnNowPlaying) btnNowPlaying.classList.toggle('active', viewName === 'playing');
         if (btnQueue) btnQueue.classList.toggle('active', viewName === 'queue');
         if (btnLyrics) btnLyrics.classList.toggle('btn-active', viewName === 'lyrics');
+        const btnPlayerAskAi = document.getElementById('btn-player-ask-ai');
+        if (btnPlayerAskAi) btnPlayerAskAi.classList.toggle('active', viewName === 'ai-chat');
     }
 
     // ── Right Sidebar Tab / Button Handlers ──────────────────────────────────
@@ -2687,11 +2708,29 @@ document.addEventListener('DOMContentLoaded', () => {
         persistRightSidebarView(viewName);
     }
 
+    function getTrackAiContext() {
+        const pageBtn = document.getElementById('btn-track-ask-ai');
+        if (pageBtn?.dataset?.id) {
+            return { id: pageBtn.dataset.id, type: pageBtn.dataset.type || 'AUDIO' };
+        }
+        const playerBtn = document.getElementById('btn-player-ask-ai');
+        if (playerBtn?.dataset?.id) {
+            return { id: playerBtn.dataset.id, type: playerBtn.dataset.type || 'AUDIO' };
+        }
+        const aiForm = document.getElementById('rs-ai-form');
+        if (aiForm?.dataset?.mediaId) {
+            return { id: aiForm.dataset.mediaId, type: aiForm.dataset.mediaType || 'AUDIO' };
+        }
+        if (currentTrack?.id) {
+            return { id: String(currentTrack.id), type: currentTrack.type || 'AUDIO' };
+        }
+        return { id: '', type: 'AUDIO' };
+    }
+
     function resolveTrackAiMediaId() {
         const aiForm = document.getElementById('rs-ai-form');
         if (aiForm?.dataset?.mediaId) return aiForm.dataset.mediaId;
-        const btn = document.getElementById('btn-track-ask-ai');
-        return btn?.dataset?.id || '';
+        return getTrackAiContext().id;
     }
 
     function bindTrackAiFormSubmit(aiForm) {
@@ -2749,23 +2788,27 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function syncTrackAiMediaFromPage() {
-        const btn = document.getElementById('btn-track-ask-ai');
-        if (!btn?.dataset?.id) return;
+        const ctx = getTrackAiContext();
+        if (!ctx.id) return;
         const aiForm = document.getElementById('rs-ai-form');
         if (!aiForm) return;
         const sidebar = document.getElementById('right-sidebar');
-        if (sidebar?.classList.contains('view-ai-chat') && aiForm.dataset.mediaId !== btn.dataset.id) {
-            openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false });
+        if (sidebar?.classList.contains('view-ai-chat') && aiForm.dataset.mediaId !== ctx.id) {
+            openTrackAiChat(ctx.id, ctx.type, { focusInput: false });
         }
     }
 
-    // Click on "Đặt câu hỏi" button — uses event delegation
+    // Click on "Đặt câu hỏi" (track page + bottom bar) — event delegation
     document.body.addEventListener('click', (e) => {
-        const btnAskAi = e.target.closest('#btn-track-ask-ai');
-        if (!btnAskAi) return;
+        const btnAskAi = e.target.closest('#btn-track-ask-ai, #btn-player-ask-ai');
+        if (!btnAskAi || btnAskAi.disabled) return;
         e.preventDefault();
         e.stopPropagation();
-        openTrackAiChat(btnAskAi.dataset.id, btnAskAi.dataset.type);
+        const ctx = btnAskAi.dataset.id
+            ? { id: btnAskAi.dataset.id, type: btnAskAi.dataset.type || 'AUDIO' }
+            : getTrackAiContext();
+        if (!ctx.id) return;
+        openTrackAiChat(ctx.id, ctx.type);
     });
 
     document.body.addEventListener('htmx:afterSwap', (e) => {
@@ -2781,12 +2824,12 @@ document.addEventListener('DOMContentLoaded', () => {
         const chatLog = document.getElementById('rs-ai-chat-log');
         const suggestionsBox = document.getElementById('rs-ai-suggestions-box');
 
-        const btn = document.getElementById('btn-track-ask-ai');
+        const ctx = getTrackAiContext();
         const mediaId = resolveTrackAiMediaId();
         if (!mediaId) return;
 
-        if (btn?.dataset?.id) {
-            openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false, resetIfNewTrack: false });
+        if (ctx.id) {
+            openTrackAiChat(ctx.id, ctx.type, { focusInput: false, resetIfNewTrack: false });
         } else if (aiForm) {
             aiForm.dataset.mediaId = mediaId;
         }
@@ -2858,9 +2901,9 @@ document.addEventListener('DOMContentLoaded', () => {
         const chip = e.target.closest('.rs-ai-chip.track-ai-chip');
         if (!chip) return;
         e.stopPropagation();
-        const btn = document.getElementById('btn-track-ask-ai');
-        if (!btn?.dataset?.id) return;
-        openTrackAiChat(btn.dataset.id, btn.dataset.type, { focusInput: false, resetIfNewTrack: false });
+        const ctx = getTrackAiContext();
+        if (!ctx.id) return;
+        openTrackAiChat(ctx.id, ctx.type, { focusInput: false, resetIfNewTrack: false });
         doAskAi(chip.textContent.trim());
     });
 

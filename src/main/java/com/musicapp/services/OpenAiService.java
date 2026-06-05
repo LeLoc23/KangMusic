@@ -56,8 +56,7 @@ public class OpenAiService {
 
         String prompt = """
                 You are KangMusic's in-app music assistant. Answer in Vietnamese.
-                Use only the media context provided by the application. If information is missing, say so clearly.
-                Keep the answer concise and helpful.
+                Answer based on the provided media context (especially lyrics). If information is missing, you can use your general knowledge of the song to answer, but keep it accurate, concise, and helpful.
 
                 Media context:
                 Title: %s

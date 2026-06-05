@@ -6,6 +6,7 @@ import com.musicapp.models.MediaItem;
 import com.musicapp.models.SongLyrics;
 import com.musicapp.repositories.MediaItemRepository;
 import com.musicapp.repositories.SongLyricsRepository;
+import com.musicapp.services.LyricsProgressTracker;
 import com.musicapp.services.LyricsService;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -27,14 +28,17 @@ public class AdminLyricsController {
     private final MediaItemRepository mediaItemRepository;
     private final SongLyricsRepository songLyricsRepository;
     private final LyricsService lyricsService;
+    private final LyricsProgressTracker progressTracker;
     private final ObjectMapper objectMapper = new ObjectMapper();
 
     public AdminLyricsController(MediaItemRepository mediaItemRepository,
                                  SongLyricsRepository songLyricsRepository,
-                                 LyricsService lyricsService) {
+                                 LyricsService lyricsService,
+                                 LyricsProgressTracker progressTracker) {
         this.mediaItemRepository = mediaItemRepository;
         this.songLyricsRepository = songLyricsRepository;
         this.lyricsService = lyricsService;
+        this.progressTracker = progressTracker;
     }
 
     @GetMapping("/admin/songs/{songId}/lyrics/edit")
@@ -145,11 +149,19 @@ public class AdminLyricsController {
 
     @GetMapping(value = "/api/songs/{songId}/lyrics/status", produces = MediaType.APPLICATION_JSON_VALUE)
     @ResponseBody
-    public ResponseEntity<Map<String, String>> getLyricsStatus(@PathVariable Long songId) {
+    public ResponseEntity<Map<String, Object>> getLyricsStatus(@PathVariable Long songId) {
         Optional<MediaItem> songOpt = mediaItemRepository.findById(songId);
         if (songOpt.isEmpty()) {
             return ResponseEntity.status(HttpStatus.NOT_FOUND).body(Map.of("error", "Song not found"));
         }
-        return ResponseEntity.ok(Map.of("status", songOpt.get().getLyricsStatus().name()));
+        MediaItem song = songOpt.get();
+        Map<String, Object> body = new LinkedHashMap<>();
+        body.put("status", song.getLyricsStatus().name());
+        if (song.getLyricsStatus() == LyricsStatus.PROCESSING) {
+            LyricsProgressTracker.Progress progress = progressTracker.get(songId);
+            body.put("percent", progress.percent());
+            body.put("message", progress.message());
+        }
+        return ResponseEntity.ok(body);
     }
 }

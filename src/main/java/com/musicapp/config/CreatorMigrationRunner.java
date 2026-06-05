@@ -19,7 +19,7 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.Optional;
 
-@Configuration
+// @Configuration
 @Profile("dev")
 public class CreatorMigrationRunner implements CommandLineRunner {
 
